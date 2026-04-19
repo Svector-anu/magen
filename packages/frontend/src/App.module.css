@@ -2,23 +2,24 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(47,129,247,0.07) 0%, transparent 70%),
-    var(--bg);
+  background: var(--bg);
 }
 
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
-  height: 48px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(9, 11, 15, 0.85);
-  backdrop-filter: blur(12px);
+  padding: 0 40px;
+  height: 52px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(9, 11, 15, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .logo {
@@ -28,23 +29,26 @@
 }
 
 .logoMark {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   color: var(--text);
+  text-transform: uppercase;
 }
 
 .logoDivider {
   color: var(--blue);
-  font-size: 10px;
+  font-size: 9px;
+  opacity: 0.7;
 }
 
 .logoSub {
   font-size: 11px;
   color: var(--text-dim);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .main {
   flex: 1;
+  padding-top: 52px;
 }

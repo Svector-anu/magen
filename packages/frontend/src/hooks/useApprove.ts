@@ -24,6 +24,8 @@ export function useSetOperator() {
       abi: WRAPPED_USDC_ABI,
       functionName: "setOperator",
       args: [VAULT_ADDRESS, deadline],
+      maxFeePerGas: 500_000_000n,
+      maxPriorityFeePerGas: 1_000_000n,
     });
   }
 

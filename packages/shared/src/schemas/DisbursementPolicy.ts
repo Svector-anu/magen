@@ -15,7 +15,7 @@ export const DisbursementPolicySchema = z.object({
     .string()
     .regex(/^0x[0-9a-fA-F]{40}$/, "Must be a valid EVM address"),
 
-  recipient_display_name: z.string().min(1),
+  recipient_display_name: z.string(),
 
   amount_usdc: z
     .string()
@@ -25,13 +25,13 @@ export const DisbursementPolicySchema = z.object({
 
   start_date: z.string().datetime(),
 
-  end_date: z.string().datetime().optional(),
+  end_date: z.string().datetime().nullish().transform(v => v ?? undefined),
 
   approval_mode: ApprovalModeSchema,
 
-  approval_period_end: z.string().datetime().optional(),
+  approval_period_end: z.string().datetime().nullish().transform(v => v ?? undefined),
 
-  memo: z.string().max(280).optional(),
+  memo: z.string().max(280).nullish().transform(v => v ?? undefined),
 
   created_at: z.string().datetime(),
 }).superRefine((val, ctx) => {

@@ -5,7 +5,15 @@ import { enrichWithChainGpt } from "./chainGptEnrich.js";
 
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  if (!_openai) {
+    if (process.env.XAI_API_KEY) {
+      _openai = new OpenAI({ apiKey: process.env.XAI_API_KEY, baseURL: "https://api.x.ai/v1" });
+    } else if (process.env.GROQ_API_KEY) {
+      _openai = new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" });
+    } else {
+      _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+  }
   return _openai;
 }
 
@@ -50,11 +58,11 @@ export async function parseInstruction(
   const enrichmentPromise = enrichWithChainGpt(instruction);
 
   const completion = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
+    model: process.env.XAI_API_KEY ? "grok-3-mini" : process.env.GROQ_API_KEY ? "llama-3.3-70b-versatile" : "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: instruction },
+      { role: "user", content: `Current UTC time: ${new Date().toISOString()}\n\n${instruction}` },
     ],
     temperature: 0,
   });
