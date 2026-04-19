@@ -1,3 +1,3 @@
-# Magen
+# magen
 
-> still shipping
+> still shipping ily 🫶 
