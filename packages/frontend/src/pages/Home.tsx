@@ -1,14 +1,37 @@
 import { useState, useRef, useEffect } from "react";
 import { api } from "../lib/api.js";
-import type { ParseResponse, ParseErrorResponse } from "../lib/api.js";
+import type { ParseErrorResponse } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import styles from "./Home.module.css";
 
-const PLACEHOLDER_EXAMPLES = [
+const PLACEHOLDERS = [
   "pay alice.eth 500 USDC every month, auto-approve for 3 months",
-  "send 0x1234...5678 a one-time payment of 1000 USDC",
+  "send 0x742d35Cc6634C0532925a3b8D4C9E4 a one-time 1000 USDC",
   "pay bob@company.com 250 USDC weekly until I say stop",
+  "send contractor.eth 750 USDC on the 1st of every month",
 ];
+
+interface PolicyCardData {
+  recipient_display_name: string;
+  recipient_wallet: string;
+  amount_usdc: string;
+  frequency: string;
+  approval_mode: string;
+  start_date: string;
+  end_date?: string;
+  memo?: string;
+  id?: string;
+}
+
+const DEMO: PolicyCardData = {
+  recipient_display_name: "alice.eth",
+  recipient_wallet: "0x3d2e9f4a8c1b7e5d2f6a9c3b8e1d4f7a2c5b8e1d",
+  amount_usdc: "500.000000",
+  frequency: "monthly",
+  approval_mode: "approve-for-period",
+  start_date: "2026-04-19T00:00:00Z",
+  id: "demo",
+};
 
 type Stage = "idle" | "parsing" | "resolved" | "error";
 
@@ -18,13 +41,13 @@ export function Home() {
   const [policy, setPolicy] = useState<DisbursementPolicy | null>(null);
   const [enrichment, setEnrichment] = useState<{ onChainContext?: string }>({});
   const [errors, setErrors] = useState<string[]>([]);
-  const [exampleIdx, setExampleIdx] = useState(0);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const t = setInterval(
-      () => setExampleIdx((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length),
-      3500
+      () => setPlaceholderIdx((i) => (i + 1) % PLACEHOLDERS.length),
+      3800
     );
     return () => clearInterval(t);
   }, []);
@@ -54,19 +77,25 @@ export function Home() {
   }
 
   const canParse = instruction.trim().length > 0 && stage !== "parsing";
+  const isDemo = stage !== "resolved";
+  const previewData: PolicyCardData = stage === "resolved" && policy ? policy : DEMO;
 
   return (
     <div className={styles.page}>
       <div className={styles.container}>
+        <section className={styles.hero}>
+          <h1 className={styles.headline}>
+            TELL MAGEN<br />WHAT TO PAY
+          </h1>
+          <p className={styles.subheadline}>
+            Magen turns plain English into private, recurring onchain payments.{" "}
+            <span className={styles.subEmphasis}>No forms. No exposure.</span>
+          </p>
+        </section>
 
-        {/* prompt section */}
-        <div className={styles.promptSection}>
-          <div className={styles.promptLabel}>
-            <span className={styles.slash}>//</span> describe the payment
-          </div>
-
-          <div className={styles.inputWrap} data-focused={stage === "idle" || stage === "error"}>
-            <span className={styles.prompt}>&gt;</span>
+        <div className={styles.commandSection}>
+          <div className={styles.inputWrap}>
+            <span className={styles.promptChar}>&gt;</span>
             <textarea
               ref={textareaRef}
               className={styles.textarea}
@@ -75,120 +104,167 @@ export function Home() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleParse();
               }}
-              placeholder={PLACEHOLDER_EXAMPLES[exampleIdx]}
-              rows={3}
+              placeholder={PLACEHOLDERS[placeholderIdx]}
+              rows={2}
               disabled={stage === "parsing" || stage === "resolved"}
               autoFocus
             />
             {stage === "idle" && instruction.length === 0 && (
-              <span className={styles.cursor} />
+              <span className={styles.cursorBlock} />
             )}
           </div>
 
           <div className={styles.actions}>
-            {stage === "resolved" ? (
-              <button className={styles.btnGhost} onClick={handleReset}>
-                ← edit
-              </button>
-            ) : (
-              <button
-                className={styles.btnPrimary}
-                onClick={handleParse}
-                disabled={!canParse}
-              >
-                {stage === "parsing" ? (
-                  <span className={styles.parsing}>parsing<Dots /></span>
-                ) : (
-                  "parse ▸"
-                )}
-              </button>
+            <div className={styles.actionsLeft}>
+              {stage === "resolved" ? (
+                <button className={styles.btnGhost} onClick={handleReset}>
+                  ← new instruction
+                </button>
+              ) : (
+                <button
+                  className={styles.btnPrimary}
+                  onClick={handleParse}
+                  disabled={!canParse}
+                >
+                  {stage === "parsing" ? (
+                    <span className={styles.parsing}>
+                      parsing<Dots />
+                    </span>
+                  ) : (
+                    "parse ▸"
+                  )}
+                </button>
+              )}
+              <span className={styles.hint}>⌘↵</span>
+            </div>
+
+            {stage === "error" && errors.length > 0 && (
+              <div className={styles.inlineErrors}>
+                {errors.map((e, i) => (
+                  <span key={i} className={styles.errorLine}>✕ {e}</span>
+                ))}
+              </div>
             )}
-            <span className={styles.hint}>⌘↵ to run</span>
           </div>
         </div>
 
-        {/* divider */}
-        {(stage === "resolved" || stage === "error") && (
-          <div className={styles.divider}>
-            <span>{stage === "resolved" ? "// parsed output" : "// errors"}</span>
+        <div className={styles.previewOuter}>
+          <div className={styles.previewChrome}>
+            <div className={styles.chromeDots}>
+              <span className={`${styles.dot} ${styles.dotRed}`} />
+              <span className={`${styles.dot} ${styles.dotYellow}`} />
+              <span className={`${styles.dot} ${styles.dotGreen}`} />
+            </div>
+            <div className={styles.chromeUrl}>
+              {isDemo
+                ? "magen://policy/preview"
+                : `magen://policy/${(previewData.id ?? "").slice(0, 8)}`}
+            </div>
+            {isDemo && <span className={styles.demoTag}>DEMO</span>}
           </div>
-        )}
 
-        {/* error output */}
-        {stage === "error" && (
-          <div className={styles.errorBlock} style={{ animation: "fadeUp 0.2s ease" }}>
-            {errors.map((e, i) => (
-              <div key={i} className={styles.errorLine}>
-                <span className={styles.errorTag}>✕</span> {e}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* policy output */}
-        {stage === "resolved" && policy && (
-          <PolicyOutput
-            policy={policy}
-            enrichment={enrichment}
-          />
-        )}
+          <PolicyCard data={previewData} isDemo={isDemo} enrichment={enrichment} />
+        </div>
       </div>
     </div>
   );
 }
 
-function PolicyOutput({
-  policy,
+function PolicyCard({
+  data,
+  isDemo,
   enrichment,
 }: {
-  policy: DisbursementPolicy;
-  enrichment: { onChainContext?: string };
+  data: PolicyCardData;
+  isDemo: boolean;
+  enrichment?: { onChainContext?: string };
 }) {
-  const rows: [string, string, string?][] = [
-    ["recipient", policy.recipient_display_name, "label"],
-    ["wallet", `${policy.recipient_wallet.slice(0, 10)}…${policy.recipient_wallet.slice(-8)}`, "addr"],
-    ["amount", `${policy.amount_usdc} USDC`, "value"],
-    ["frequency", policy.frequency, "badge"],
-    ["approval", policy.approval_mode, "badge"],
-    ["start", new Date(policy.start_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })],
-    ...(policy.end_date ? [["end", new Date(policy.end_date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })] as [string, string]] : []),
-    ...(policy.memo ? [["memo", policy.memo] as [string, string]] : []),
-  ];
+  const walletShort = `${data.recipient_wallet.slice(0, 10)}…${data.recipient_wallet.slice(-8)}`;
+  const startFmt = new Date(data.start_date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
-    <div className={styles.policyBlock} style={{ animation: "fadeUp 0.25s ease" }}>
+    <div className={`${styles.previewBody} ${isDemo ? styles.previewBodyDemo : ""}`}>
       <table className={styles.policyTable}>
         <tbody>
-          {rows.map(([key, val, type]) => (
-            <tr key={key}>
-              <td className={styles.policyKey}>{key}</td>
-              <td className={styles.policyVal}>
-                {type === "addr" ? (
-                  <span className={styles.addr}>{val}</span>
-                ) : type === "badge" ? (
-                  <span className={styles.badge}>{val}</span>
-                ) : type === "value" ? (
-                  <span className={styles.valueHighlight}>{val}</span>
-                ) : (
-                  val
-                )}
+          <tr>
+            <td className={styles.pKey}>recipient</td>
+            <td className={styles.pVal}>{data.recipient_display_name}</td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>wallet</td>
+            <td className={styles.pVal}>
+              <span className={styles.addr}>{walletShort}</span>
+            </td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>amount</td>
+            <td className={styles.pVal}>
+              <span className={styles.valueGreen}>{data.amount_usdc} USDC</span>
+            </td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>frequency</td>
+            <td className={styles.pVal}>
+              <span className={styles.badgeBlue}>{data.frequency}</span>
+            </td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>approval</td>
+            <td className={styles.pVal}>
+              <span className={styles.badgeBlue}>{data.approval_mode}</span>
+            </td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>disclosure</td>
+            <td className={styles.pVal}>
+              <span className={styles.badgeGreen}>encrypted</span>
+            </td>
+          </tr>
+          <tr>
+            <td className={styles.pKey}>start</td>
+            <td className={styles.pVal}>{startFmt}</td>
+          </tr>
+          {data.end_date && (
+            <tr>
+              <td className={styles.pKey}>end</td>
+              <td className={styles.pVal}>
+                {new Date(data.end_date).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
               </td>
             </tr>
-          ))}
+          )}
+          {data.memo && (
+            <tr>
+              <td className={styles.pKey}>memo</td>
+              <td className={styles.pVal}>{data.memo}</td>
+            </tr>
+          )}
         </tbody>
       </table>
 
-      {enrichment.onChainContext && (
+      {enrichment?.onChainContext && (
         <div className={styles.enrichment}>
-          <span className={styles.slash}>//</span> {enrichment.onChainContext}
+          <span className={styles.slashDim}>//</span> {enrichment.onChainContext}
         </div>
       )}
 
-      <div className={styles.policyActions}>
-        <button className={styles.btnApprove}>
-          approve ▸
+      <div className={styles.previewActions}>
+        <button
+          className={`${styles.btnApprove} ${isDemo ? styles.btnApproveDemo : ""}`}
+          disabled={isDemo}
+        >
+          {isDemo ? "connect wallet to approve" : "approve ▸"}
         </button>
-        <span className={styles.policyId}>id: {policy.id.slice(0, 8)}</span>
+        <span className={styles.policyId}>
+          id: {isDemo ? "demo" : (data.id ?? "").slice(0, 8)}
+        </span>
       </div>
     </div>
   );
