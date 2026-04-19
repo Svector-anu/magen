@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import { DisbursementPolicySchema, type DisbursementPolicy } from "@magen/shared";
 import { enrichWithChainGpt } from "./chainGptEnrich.js";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 const SYSTEM_PROMPT = `You are a disbursement policy parser. Given a plain-English payment instruction, extract structured parameters.
 
@@ -45,7 +49,7 @@ export async function parseInstruction(
 ): Promise<ParseResult> {
   const enrichmentPromise = enrichWithChainGpt(instruction);
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [
