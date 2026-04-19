@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { api } from "../lib/api.js";
 import type { ParseErrorResponse } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
+import { ApproveModal } from "../components/ApproveModal.js";
 import styles from "./Home.module.css";
 
 const PLACEHOLDERS = [
@@ -42,6 +43,7 @@ export function Home() {
   const [enrichment, setEnrichment] = useState<{ onChainContext?: string }>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [approveOpen, setApproveOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -148,6 +150,10 @@ export function Home() {
           </div>
         </div>
 
+        {approveOpen && policy && (
+          <ApproveModal policy={policy} onClose={() => setApproveOpen(false)} />
+        )}
+
         <div className={styles.previewOuter}>
           <div className={styles.previewChrome}>
             <div className={styles.chromeDots}>
@@ -163,7 +169,12 @@ export function Home() {
             {isDemo && <span className={styles.demoTag}>DEMO</span>}
           </div>
 
-          <PolicyCard data={previewData} isDemo={isDemo} enrichment={enrichment} />
+          <PolicyCard
+            data={previewData}
+            isDemo={isDemo}
+            enrichment={enrichment}
+            onApprove={() => setApproveOpen(true)}
+          />
         </div>
       </div>
     </div>
@@ -174,10 +185,12 @@ function PolicyCard({
   data,
   isDemo,
   enrichment,
+  onApprove,
 }: {
   data: PolicyCardData;
   isDemo: boolean;
   enrichment?: { onChainContext?: string };
+  onApprove?: () => void;
 }) {
   const walletShort = `${data.recipient_wallet.slice(0, 10)}…${data.recipient_wallet.slice(-8)}`;
   const startFmt = new Date(data.start_date).toLocaleDateString("en-US", {
@@ -259,8 +272,9 @@ function PolicyCard({
         <button
           className={`${styles.btnApprove} ${isDemo ? styles.btnApproveDemo : ""}`}
           disabled={isDemo}
+          onClick={!isDemo ? onApprove : undefined}
         >
-          {isDemo ? "connect wallet to approve" : "approve ▸"}
+          {isDemo ? "parse an instruction to approve" : "approve ▸"}
         </button>
         <span className={styles.policyId}>
           id: {isDemo ? "demo" : (data.id ?? "").slice(0, 8)}
