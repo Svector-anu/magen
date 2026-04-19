@@ -9,8 +9,8 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "dependencies": {
-    "@magen/shared": "workspace:*",
     "@chaingpt/generalchat": "^0.0.17",
+    "@magen/shared": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "ethers": "^6.16.0",
@@ -19,6 +19,7 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.0",

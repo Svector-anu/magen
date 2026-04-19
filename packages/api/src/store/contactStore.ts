@@ -3,7 +3,9 @@ import { resolve, dirname } from "path";
 import { randomUUID } from "crypto";
 import { ContactSchema, type Contact } from "@magen/shared";
 
-const DATA_DIR = resolve(import.meta.dirname, "../../data");
+const DATA_DIR = process.env.MAGEN_DATA_DIR
+  ? resolve(process.env.MAGEN_DATA_DIR)
+  : resolve(import.meta.dirname, "../../data");
 const STORE_PATH = resolve(DATA_DIR, "contacts.json");
 
 function ensureStore(): Contact[] {

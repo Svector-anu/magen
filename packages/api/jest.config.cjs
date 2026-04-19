@@ -3,16 +3,20 @@ module.exports = {
   preset: "ts-jest/presets/default-esm",
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts"],
-  testMatch: ["**/src/**/*.test.ts"],
+  setupFiles: ["<rootDir>/src/__tests__/jestSetup.cjs"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@magen/shared$": "<rootDir>/../shared/src/index.ts",
   },
   transform: {
     "^.+\\.tsx?$": [
       "ts-jest",
       {
         useESM: true,
-        tsconfig: "./tsconfig.json",
+        tsconfig: {
+          moduleResolution: "node",
+          rootDir: "../../",
+        },
       },
     ],
   },
