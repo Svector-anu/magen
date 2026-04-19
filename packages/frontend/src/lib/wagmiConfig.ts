@@ -3,7 +3,7 @@ import { arbitrumSepolia } from "wagmi/chains";
 
 export const wagmiConfig = getDefaultConfig({
   appName: "Magen",
-  projectId: "magen-dev",
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "magen-dev",
   chains: [arbitrumSepolia],
   ssr: false,
 });
