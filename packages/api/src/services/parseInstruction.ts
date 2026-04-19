@@ -1,0 +1,114 @@
+import OpenAI from "openai";
+import { randomUUID } from "crypto";
+import { DisbursementPolicySchema, type DisbursementPolicy } from "@magen/shared";
+import { enrichWithChainGpt } from "./chainGptEnrich.js";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const SYSTEM_PROMPT = `You are a disbursement policy parser. Given a plain-English payment instruction, extract structured parameters.
+
+RULES:
+- amount_usdc: decimal string with up to 6 decimal places (e.g. "100.50"). USDC has 6 decimals.
+- frequency: ONLY one of: "once", "daily", "weekly", "monthly"
+- approval_mode: ONLY one of: "ask-every-time", "approve-for-period", "continue-until-revoked"
+- start_date: ISO 8601 UTC datetime. If not specified, use current time.
+- end_date: ISO 8601 UTC datetime. Only include if explicitly stated.
+- recipient_wallet: must be a valid 0x EVM address (42 hex chars). If the input uses a name/ENS that you cannot resolve to a confirmed wallet, set recipient_wallet to "UNRESOLVED" and recipient_display_name to the name given.
+- memo: optional note, max 280 chars.
+- approval_period_end: ISO 8601 UTC datetime. REQUIRED when approval_mode is "approve-for-period".
+
+IMPORTANT: If the recipient wallet address cannot be determined from the instruction, return recipient_wallet as "UNRESOLVED". The caller will handle resolution. Do not hallucinate wallet addresses.
+
+Respond with ONLY a JSON object matching this exact shape:
+{
+  "recipient_wallet": string,
+  "recipient_display_name": string,
+  "amount_usdc": string,
+  "frequency": "once" | "daily" | "weekly" | "monthly",
+  "start_date": string,
+  "end_date": string | undefined,
+  "approval_mode": "ask-every-time" | "approve-for-period" | "continue-until-revoked",
+  "approval_period_end": string | undefined,
+  "memo": string | undefined
+}`;
+
+export interface ParseResult {
+  policy: DisbursementPolicy | null;
+  recipientUnresolved: boolean;
+  rawLlmOutput: object;
+  enrichment: object;
+  validationErrors: string[] | null;
+}
+
+export async function parseInstruction(
+  instruction: string
+): Promise<ParseResult> {
+  const enrichmentPromise = enrichWithChainGpt(instruction);
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: instruction },
+    ],
+    temperature: 0,
+  });
+
+  const rawText = completion.choices[0]?.message?.content ?? "{}";
+  let rawLlmOutput: object;
+  try {
+    rawLlmOutput = JSON.parse(rawText);
+  } catch {
+    return {
+      policy: null,
+      recipientUnresolved: false,
+      rawLlmOutput: {},
+      enrichment: {},
+      validationErrors: ["LLM returned non-JSON output"],
+    };
+  }
+
+  const enrichment = await enrichmentPromise;
+
+  const isUnresolved =
+    (rawLlmOutput as Record<string, unknown>)["recipient_wallet"] === "UNRESOLVED";
+
+  if (isUnresolved) {
+    return {
+      policy: null,
+      recipientUnresolved: true,
+      rawLlmOutput,
+      enrichment,
+      validationErrors: ["Recipient wallet address could not be determined"],
+    };
+  }
+
+  const candidate = {
+    ...(rawLlmOutput as Record<string, unknown>),
+    id: randomUUID(),
+    created_at: new Date().toISOString(),
+  };
+
+  const result = DisbursementPolicySchema.safeParse(candidate);
+
+  if (!result.success) {
+    return {
+      policy: null,
+      recipientUnresolved: false,
+      rawLlmOutput,
+      enrichment,
+      validationErrors: result.error.issues.map(
+        (i) => `${i.path.join(".")}: ${i.message}`
+      ),
+    };
+  }
+
+  return {
+    policy: result.data,
+    recipientUnresolved: false,
+    rawLlmOutput,
+    enrichment,
+    validationErrors: null,
+  };
+}

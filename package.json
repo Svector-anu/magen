@@ -1,0 +1,23 @@
+{
+  "name": "magen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:shared": "pnpm --filter @magen/shared build",
+    "dev:api": "pnpm --filter @magen/api dev",
+    "dev:frontend": "pnpm --filter @magen/frontend dev",
+    "test": "pnpm -r test",
+    "compile": "pnpm --filter @magen/contracts compile",
+    "deploy": "pnpm --filter @magen/contracts deploy"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
+  "pnpm": {
+    "overrides": {
+      "@iexec-nox/nox-protocol-contracts": "0.1.0-beta.9"
+    }
+  }
+}

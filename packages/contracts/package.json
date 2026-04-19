@@ -1,0 +1,23 @@
+{
+  "name": "@magen/contracts",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx tsx scripts/deploy.ts",
+    "test": "npx hardhat test"
+  },
+  "dependencies": {
+    "@iexec-nox/nox-protocol-contracts": "0.1.0-beta.9",
+    "@iexec-nox/nox-confidential-contracts": "0.1.0-beta.2",
+    "dotenv": "^17.0.0",
+    "ethers": "^6.16.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "hardhat": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  }
+}
