@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
     "@magen/shared": "workspace:*",
     "@iexec-nox/handle": "0.1.0-beta.10",
     "@rainbow-me/rainbowkit": "^2.0.0",

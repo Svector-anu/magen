@@ -1,0 +1,76 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:           #090b0f;
+  --bg-panel:     #0d1117;
+  --bg-elevated:  #161b27;
+  --bg-hover:     #1c2333;
+  --border:       #21262d;
+  --border-blue:  rgba(47, 129, 247, 0.25);
+  --text:         #cdd9e5;
+  --text-muted:   #768390;
+  --text-dim:     #444c56;
+  --blue:         #2f81f7;
+  --blue-bright:  #58a6ff;
+  --blue-glow:    rgba(47, 129, 247, 0.15);
+  --green:        #3fb950;
+  --amber:        #d29922;
+  --red:          #f85149;
+  --font-mono:    'IBM Plex Mono', 'Fira Code', monospace;
+  --font-sans:    'IBM Plex Sans', sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(47, 129, 247, 0.3);
+  color: var(--text);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0); }
+  50%       { box-shadow: 0 0 0 4px rgba(47, 129, 247, 0.1); }
+}
