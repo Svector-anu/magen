@@ -1,0 +1,72 @@
+services:
+  - name: magen-api
+    type: web
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
+    startCommand: node packages/api/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "10000"
+      - key: ARBITRUM_SEPOLIA_RPC
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: DISBURSEMENT_AGENT_ADDRESS
+        sync: false
+      - key: WRAPPED_USDC_ADDRESS
+        sync: false
+      - key: AGENT_PUBLIC_JWK
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CHAINGPT_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  - name: magen-agent
+    type: worker
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/agent build
+    startCommand: node packages/agent/dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ARBITRUM_SEPOLIA_RPC
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: DISBURSEMENT_AGENT_ADDRESS
+        sync: false
+      - key: WRAPPED_USDC_ADDRESS
+        sync: false
+      - key: AGENT_PRIVATE_JWK
+        sync: false
+      - key: API_BASE
+        sync: false
+
+  - name: magen-frontend
+    type: web
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/frontend build
+    staticPublishPath: packages/frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_WRAPPED_USDC_ADDRESS
+        sync: false
+      - key: VITE_VAULT_ADDRESS
+        sync: false
+      - key: VITE_API_URL
+        sync: false

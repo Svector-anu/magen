@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { api } from "../lib/api.js";
 import type { ParseErrorResponse } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
@@ -36,6 +36,16 @@ const DEMO: PolicyCardData = {
 
 type Stage = "idle" | "parsing" | "resolved" | "error";
 
+interface ActivePolicy {
+  id: string;
+  recipient_display_name: string;
+  recipient_wallet: string;
+  amount_usdc: string;
+  frequency: string;
+  next_execution_at: string;
+  status: string;
+}
+
 export function Home() {
   const [instruction, setInstruction] = useState("");
   const [stage, setStage] = useState<Stage>("idle");
@@ -44,7 +54,16 @@ export function Home() {
   const [errors, setErrors] = useState<string[]>([]);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const refreshPolicies = useCallback(() => {
+    api.listPolicies().then(setActivePolicies).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshPolicies();
+  }, [refreshPolicies]);
 
   useEffect(() => {
     const t = setInterval(
@@ -76,6 +95,11 @@ export function Home() {
     setErrors([]);
     setInstruction("");
     setTimeout(() => textareaRef.current?.focus(), 50);
+  }
+
+  async function handleCancel(id: string) {
+    await api.cancelPolicy(id).catch(() => {});
+    refreshPolicies();
   }
 
   const canParse = instruction.trim().length > 0 && stage !== "parsing";
@@ -151,7 +175,13 @@ export function Home() {
         </div>
 
         {approveOpen && policy && (
-          <ApproveModal policy={policy} onClose={() => setApproveOpen(false)} />
+          <ApproveModal
+            policy={policy}
+            onClose={() => {
+              setApproveOpen(false);
+              refreshPolicies();
+            }}
+          />
         )}
 
         <div className={styles.previewOuter}>
@@ -176,6 +206,34 @@ export function Home() {
             onApprove={() => setApproveOpen(true)}
           />
         </div>
+        {activePolicies.length > 0 && (
+          <div className={styles.policyList}>
+            <div className={styles.policyListHeader}>
+              <span className={styles.slash}>//</span> active policies
+            </div>
+            {activePolicies.map((p) => (
+              <div key={p.id} className={styles.policyListRow}>
+                <div className={styles.policyListMeta}>
+                  <span className={styles.policyListName}>{p.recipient_display_name}</span>
+                  <span className={styles.policyListAmount}>{p.amount_usdc} USDC</span>
+                  <span className={styles.badgeBlue}>{p.frequency}</span>
+                </div>
+                <div className={styles.policyListRight}>
+                  <span className={styles.policyListNext}>
+                    next: {new Date(p.next_execution_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  <button
+                    className={styles.btnCancel}
+                    onClick={() => handleCancel(p.id)}
+                    title="Cancel policy"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

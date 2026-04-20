@@ -14,6 +14,8 @@ module.exports = {
       {
         useESM: true,
         tsconfig: {
+          module: "ESNext",
+          target: "ES2022",
           moduleResolution: "node",
           rootDir: "../../",
         },

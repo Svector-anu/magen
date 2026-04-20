@@ -17,8 +17,11 @@ cache/
 typechain-types/
 deployments/
 
-# API runtime data (contact + policy stores)
+# API runtime data (contact + policy stores, SQLite DB)
 packages/api/data/
+*.db
+*.db-shm
+*.db-wal
 
 # Frontend
 packages/frontend/.vite/
@@ -31,3 +34,4 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+.env.keys

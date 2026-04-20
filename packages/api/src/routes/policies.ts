@@ -1,0 +1,36 @@
+import { Router, type Request, type Response } from "express";
+import { z } from "zod";
+import { DisbursementPolicySchema } from "@magen/shared";
+import { createPolicy, listActivePolicies, cancelPolicy } from "../services/policyStore.js";
+import { createJob } from "../services/jobStore.js";
+
+export const policiesRouter = Router();
+
+const CreateSchema = z.object({
+  policy: DisbursementPolicySchema,
+  vaultAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+policiesRouter.post("/policies", (req: Request, res: Response) => {
+  const body = CreateSchema.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Invalid request", issues: body.error.issues });
+    return;
+  }
+  const stored = createPolicy(body.data.policy, body.data.vaultAddress);
+  const job = createJob(stored.id);
+  res.status(201).json({ policyId: stored.id, jobId: job.id });
+});
+
+policiesRouter.get("/policies", (_req: Request, res: Response) => {
+  res.json(listActivePolicies());
+});
+
+policiesRouter.delete("/policies/:id", (req: Request, res: Response) => {
+  const cancelled = cancelPolicy(req.params.id);
+  if (!cancelled) {
+    res.status(404).json({ error: "Policy not found or already inactive" });
+    return;
+  }
+  res.status(204).end();
+});

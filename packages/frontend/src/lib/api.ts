@@ -56,4 +56,23 @@ export const api = {
     post<Contact>("/contacts", data),
 
   deleteContact: (id: string) => del(`/contacts/${id}`),
+
+  savePolicy: (params: { policy: DisbursementPolicy; vaultAddress: string }) =>
+    post<{ policyId: string; jobId: string }>("/policies", params),
+
+  listPolicies: () =>
+    get<{
+      id: string;
+      recipient_display_name: string;
+      recipient_wallet: string;
+      amount_usdc: string;
+      frequency: string;
+      next_execution_at: string;
+      status: string;
+    }[]>("/policies"),
+
+  cancelPolicy: (id: string) => del(`/policies/${id}`),
+
+  getJobStatus: (jobId: string) =>
+    get<{ id: string; status: string; txHash?: string; error?: string }>(`/jobs/${jobId}`),
 };

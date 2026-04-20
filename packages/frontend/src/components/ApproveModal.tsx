@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { DisbursementPolicy } from "@magen/shared";
 import { CONTRACTS_READY, VAULT_ADDRESS } from "../lib/contracts.js";
 import { useSetOperator, useIsOperator, computeDeadline, deadlineLabel } from "../hooks/useApprove.js";
+import { api } from "../lib/api.js";
 import styles from "./ApproveModal.module.css";
 
 interface Props {
@@ -16,6 +17,10 @@ export function ApproveModal({ policy, onClose }: Props) {
   const { openConnectModal } = useConnectModal();
   const { data: alreadyOperator, isLoading: checkingOperator } = useIsOperator(address);
   const { setOperator, hash, isPending, isConfirming, isSuccess, error, reset } = useSetOperator();
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [execTxHash, setExecTxHash] = useState<string | null>(null);
+  const [execError, setExecError] = useState<string | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -24,6 +29,41 @@ export function ApproveModal({ policy, onClose }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Step 1: save policy + queue first job once operator is confirmed
+  useEffect(() => {
+    if (!isSuccess || !VAULT_ADDRESS || isExecuting || jobId || execTxHash || execError) return;
+    setIsExecuting(true);
+    api
+      .savePolicy({ policy, vaultAddress: VAULT_ADDRESS })
+      .then((res) => setJobId(res.jobId))
+      .catch((err: unknown) => {
+        setExecError(err instanceof Error ? err.message : String(err));
+        setIsExecuting(false);
+      });
+  }, [isSuccess, policy, isExecuting, jobId, execTxHash, execError]);
+
+  // Step 2: poll job status until done or failed
+  useEffect(() => {
+    if (!jobId || execTxHash || execError) return;
+    const interval = setInterval(async () => {
+      try {
+        const job = await api.getJobStatus(jobId);
+        if (job.status === "done" && job.txHash) {
+          setExecTxHash(job.txHash);
+          setIsExecuting(false);
+          clearInterval(interval);
+        } else if (job.status === "failed") {
+          setExecError(job.error ?? "Disbursement failed");
+          setIsExecuting(false);
+          clearInterval(interval);
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+    }, 3_000);
+    return () => clearInterval(interval);
+  }, [jobId, execTxHash, execError]);
 
   function handleApprove() {
     setOperator(computeDeadline(policy));
@@ -123,6 +163,39 @@ export function ApproveModal({ policy, onClose }: Props) {
                   {hash.slice(0, 16)}…{hash.slice(-8)} ↗
                 </a>
               </div>
+            </div>
+          )}
+
+          {isExecuting && (
+            <div className={styles.successBlock}>
+              <span className={styles.successIcon}>⏳</span>
+              <div>
+                <div className={styles.successTitle}>executing disbursement…</div>
+              </div>
+            </div>
+          )}
+
+          {execTxHash && (
+            <div className={styles.successBlock}>
+              <span className={styles.successIcon}>✓</span>
+              <div>
+                <div className={styles.successTitle}>disbursement sent</div>
+                <a
+                  className={styles.txLink}
+                  href={`https://sepolia.arbiscan.io/tx/${execTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {execTxHash.slice(0, 16)}…{execTxHash.slice(-8)} ↗
+                </a>
+              </div>
+            </div>
+          )}
+
+          {execError && (
+            <div className={styles.errorBlock}>
+              <span className={styles.errorIcon}>✕</span>
+              <span className={styles.errorText}>execute failed: {execError}</span>
             </div>
           )}
 
