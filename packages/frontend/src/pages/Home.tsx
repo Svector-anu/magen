@@ -36,6 +36,13 @@ const DEMO: PolicyCardData = {
 
 type Stage = "idle" | "parsing" | "resolved" | "error";
 
+function fmtNextDate(iso: string): string {
+  const d = new Date(iso);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString("en-US", opts);
+}
+
 interface ActivePolicy {
   id: string;
   recipient_display_name: string;
@@ -219,8 +226,11 @@ export function Home() {
                   <span className={styles.badgeBlue}>{p.frequency}</span>
                 </div>
                 <div className={styles.policyListRight}>
+                  {p.status === "paused" && (
+                    <span className={styles.badgePaused}>paused</span>
+                  )}
                   <span className={styles.policyListNext}>
-                    next: {new Date(p.next_execution_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    next: {fmtNextDate(p.next_execution_at)}
                   </span>
                   <button
                     className={styles.btnCancel}

@@ -33,11 +33,12 @@ services:
         sync: false
 
   - name: magen-agent
-    type: worker
+    type: web
     runtime: node
     plan: free
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/agent build
     startCommand: node packages/agent/dist/index.js
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production

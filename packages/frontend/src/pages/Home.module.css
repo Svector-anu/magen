@@ -338,6 +338,16 @@
   text-transform: uppercase;
 }
 
+.badgePaused {
+  display: inline-block;
+  border: 1px solid rgba(210, 153, 34, 0.35);
+  color: #d29922;
+  font-size: 10px;
+  padding: 2px 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .valueGreen {
   color: var(--green);
   font-weight: 500;

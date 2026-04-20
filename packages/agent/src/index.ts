@@ -1,6 +1,7 @@
 import { config } from "@dotenvx/dotenvx";
 import { resolve } from "path";
 import { createRequire } from "module";
+import { createServer } from "http";
 
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
@@ -68,6 +69,12 @@ async function poll(): Promise<void> {
     }
   }
 }
+
+const PORT = parseInt(process.env.PORT ?? "3002", 10);
+createServer((req, res) => {
+  res.writeHead(req.url === "/health" ? 200 : 404);
+  res.end(req.url === "/health" ? "ok" : "not found");
+}).listen(PORT);
 
 console.log(`[agent] started — polling ${API_BASE}/jobs/pending every ${POLL_INTERVAL_MS / 1000}s`);
 poll();
