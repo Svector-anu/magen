@@ -65,7 +65,7 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
       @approval_mode, @start_date, @end_date, @approval_period_end, @memo,
       @vault_address, @status, @last_executed_at, @next_execution_at, @created_at
     )
-  `).run({ ...row, last_executed_at: null });
+  `).run({ ...row, last_executed_at: null } as unknown as Record<string, string | number | null>);
 
   return row;
 }
@@ -73,7 +73,7 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
 export function listActivePolicies(): StoredPolicy[] {
   return getDb()
     .prepare(`SELECT * FROM policies WHERE status = 'active' ORDER BY created_at DESC`)
-    .all() as StoredPolicy[];
+    .all() as unknown as StoredPolicy[];
 }
 
 export function cancelPolicy(id: string): boolean {
@@ -103,7 +103,7 @@ export function listDuePolicies(): StoredPolicy[] {
           AND j.status = 'done'
           AND j.created_at > datetime('now', '-1 hour')
       ) < ?
-  `).all(now, now, now, EXEC_CAP_PER_HOUR) as StoredPolicy[];
+  `).all(now, now, now, EXEC_CAP_PER_HOUR) as unknown as StoredPolicy[];
 }
 
 export function pausePolicy(id: string): void {
@@ -114,7 +114,7 @@ export function pausePolicy(id: string): void {
 
 export function advancePolicy(id: string, executedAt: Date): void {
   const db = getDb();
-  const policy = db.prepare(`SELECT * FROM policies WHERE id = ?`).get(id) as StoredPolicy | undefined;
+  const policy = db.prepare(`SELECT * FROM policies WHERE id = ?`).get(id) as unknown as StoredPolicy | undefined;
   if (!policy) return;
 
   const next = nextExecutionDate(policy.frequency, executedAt);

@@ -1,21 +1,21 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { resolve } from "path";
 
 const DB_PATH = process.env.DB_PATH ?? resolve(process.cwd(), ".magen.db");
 
-let _db: Database.Database | null = null;
+let _db: DatabaseSync | null = null;
 
-export function getDb(): Database.Database {
+export function getDb(): DatabaseSync {
   if (!_db) {
-    _db = new Database(DB_PATH);
-    _db.pragma("journal_mode = WAL");
-    _db.pragma("foreign_keys = ON");
+    _db = new DatabaseSync(DB_PATH);
+    _db.exec("PRAGMA journal_mode = WAL");
+    _db.exec("PRAGMA foreign_keys = ON");
     migrate(_db);
   }
   return _db;
 }
 
-function migrate(db: Database.Database): void {
+function migrate(db: DatabaseSync): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS policies (
       id                  TEXT PRIMARY KEY,
@@ -51,7 +51,6 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_policies_status ON policies(status);
   `);
 
-  // Additive migrations for existing DBs
   for (const col of [
     "ALTER TABLE jobs ADD COLUMN attempt INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE jobs ADD COLUMN next_retry_at TEXT",

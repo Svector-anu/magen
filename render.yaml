@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
-    startCommand: node packages/api/dist/index.js
+    startCommand: node --experimental-sqlite packages/api/dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

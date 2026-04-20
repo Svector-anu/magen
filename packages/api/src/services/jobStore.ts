@@ -32,12 +32,12 @@ export function createJob(policyId: string): Job {
   getDb().prepare(`
     INSERT INTO jobs (id, policy_id, status, attempt, created_at)
     VALUES (@id, @policy_id, @status, @attempt, @created_at)
-  `).run(job);
+  `).run(job as unknown as Record<string, string | number | null>);
   return job;
 }
 
 export function getJob(id: string): Job | undefined {
-  return getDb().prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as Job | undefined;
+  return getDb().prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as unknown as Job | undefined;
 }
 
 export function listPendingJobs(): Job[] {
@@ -46,7 +46,7 @@ export function listPendingJobs(): Job[] {
     WHERE status = 'pending'
       AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
     ORDER BY created_at ASC
-  `).all() as Job[];
+  `).all() as unknown as Job[];
 }
 
 export function updateJob(
@@ -55,6 +55,6 @@ export function updateJob(
 ): Job | undefined {
   const db = getDb();
   const sets = Object.keys(patch).map((k) => `${k} = @${k}`).join(", ");
-  db.prepare(`UPDATE jobs SET ${sets} WHERE id = @id`).run({ ...patch, id });
+  db.prepare(`UPDATE jobs SET ${sets} WHERE id = @id`).run({ ...patch, id } as unknown as Record<string, string | number | null>);
   return getJob(id);
 }
