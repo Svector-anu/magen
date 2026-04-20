@@ -8,8 +8,14 @@ import { contactsRouter } from "./routes/contacts.js";
 import { executeRouter } from "./routes/execute.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { policiesRouter } from "./routes/policies.js";
+import { adminRouter } from "./routes/admin.js";
 import { listDuePolicies } from "./services/policyStore.js";
 import { createJob } from "./services/jobStore.js";
+import { isPaused } from "./services/pause.js";
+import { notify } from "./services/notify.js";
+import { validateEnv } from "./services/config.js";
+
+validateEnv();
 
 const app = express();
 const port = Number(process.env.API_PORT ?? 3001);
@@ -23,14 +29,20 @@ app.use("/api", contactsRouter);
 app.use("/api", executeRouter);
 app.use("/api", jobsRouter);
 app.use("/api", policiesRouter);
+app.use("/api", adminRouter);
 
 const SCHEDULER_INTERVAL_MS = 30_000;
 
 function runScheduler(): void {
+  if (isPaused()) {
+    console.warn("[scheduler] execution paused — skipping");
+    return;
+  }
   try {
     const due = listDuePolicies();
     for (const policy of due) {
       const job = createJob(policy.id);
+      notify({ type: "scheduler.queued", jobId: job.id, policyId: policy.id });
       console.log(`[scheduler] queued job ${job.id} for policy ${policy.id} (${policy.amount_usdc} USDC → ${policy.recipient_display_name})`);
     }
   } catch (err) {

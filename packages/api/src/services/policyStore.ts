@@ -83,6 +83,8 @@ export function cancelPolicy(id: string): boolean {
   return result.changes > 0;
 }
 
+const EXEC_CAP_PER_HOUR = Number(process.env.EXEC_CAP_PER_HOUR ?? 3);
+
 export function listDuePolicies(): StoredPolicy[] {
   const now = new Date().toISOString();
   return getDb().prepare(`
@@ -95,7 +97,13 @@ export function listDuePolicies(): StoredPolicy[] {
         SELECT 1 FROM jobs j
         WHERE j.policy_id = p.id AND j.status IN ('pending', 'processing')
       )
-  `).all(now, now, now) as StoredPolicy[];
+      AND (
+        SELECT COUNT(*) FROM jobs j
+        WHERE j.policy_id = p.id
+          AND j.status = 'done'
+          AND j.created_at > datetime('now', '-1 hour')
+      ) < ?
+  `).all(now, now, now, EXEC_CAP_PER_HOUR) as StoredPolicy[];
 }
 
 export function pausePolicy(id: string): void {

@@ -6,6 +6,8 @@ import { getJob, updateJob } from "../services/jobStore.js";
 import { getDb } from "../services/db.js";
 import { advancePolicy, pausePolicy } from "../services/policyStore.js";
 import type { StoredPolicy } from "../services/policyStore.js";
+import { notify } from "../services/notify.js";
+import { isPaused } from "../services/pause.js";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [60_000, 300_000]; // 1 min, 5 min
@@ -49,7 +51,14 @@ executeRouter.post("/execute", requireAgent, async (req: Request, res: Response)
     return;
   }
 
+  if (isPaused()) {
+    notify({ type: "execution.paused", jobId, policyId: policy.id });
+    res.status(503).json({ error: "Execution paused", paused: true });
+    return;
+  }
+
   updateJob(jobId, { status: "processing" });
+  notify({ type: "execution.attempt", jobId, policyId: policy.id, attempt: job.attempt, maxAttempts: MAX_ATTEMPTS });
 
   try {
     const result = await executePolicy({
@@ -62,13 +71,15 @@ executeRouter.post("/execute", requireAgent, async (req: Request, res: Response)
     const executedAt = new Date();
     updateJob(jobId, { status: "done", tx_hash: result.txHash });
     advancePolicy(policy.id, executedAt);
+    notify({ type: "execution.success", jobId, policyId: policy.id, txHash: result.txHash });
 
     res.json({ txHash: result.txHash });
   } catch (err) {
-    console.error("[execute] error:", err);
     const detail = String(err);
     const nextAttempt = job.attempt + 1;
     const permanent = isPermanentError(err);
+
+    notify({ type: "execution.failure", jobId, policyId: policy.id, attempt: nextAttempt, maxAttempts: MAX_ATTEMPTS, error: detail });
 
     if (!permanent && nextAttempt < MAX_ATTEMPTS) {
       const delayMs = RETRY_DELAYS_MS[job.attempt] ?? RETRY_DELAYS_MS.at(-1)!;
