@@ -52,6 +52,10 @@ function formatMessage(event: NotifyEvent): string {
 
 // In-memory ring buffer for volume threshold detection (last 10 min of failures)
 const recentFailures: number[] = [];
+
+export function _resetRecentFailuresForTest(): void {
+  recentFailures.length = 0;
+}
 const VOLUME_WINDOW_MS = 10 * 60 * 1000;
 const VOLUME_THRESHOLD = 5;
 
