@@ -58,7 +58,7 @@ services:
   - name: magen-frontend
     type: web
     runtime: static
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/frontend build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/frontend build
     staticPublishPath: packages/frontend/dist
     routes:
       - type: rewrite
