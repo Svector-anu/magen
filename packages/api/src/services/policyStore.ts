@@ -55,6 +55,9 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
     created_at: now.toISOString(),
   };
 
+  const params = Object.fromEntries(
+    Object.entries({ ...row, last_executed_at: null }).map(([k, v]) => [k, v === undefined ? null : v])
+  );
   db.prepare(`
     INSERT INTO policies (
       id, recipient_wallet, recipient_display_name, amount_usdc, frequency,
@@ -65,7 +68,7 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
       @approval_mode, @start_date, @end_date, @approval_period_end, @memo,
       @vault_address, @status, @last_executed_at, @next_execution_at, @created_at
     )
-  `).run({ ...row, last_executed_at: null } as unknown as Record<string, string | number | null>);
+  `).run(params as unknown as Record<string, string | number | null>);
 
   return row;
 }
