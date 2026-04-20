@@ -1,6 +1,8 @@
 import { JsonRpcProvider, Wallet, Contract, id as keccak256Id, getAddress } from "ethers";
 
-const NOX_GATEWAY = "https://2e1800fc0dddeeadc189283ed1dce13c1ae28d48-3000.apps.ovh-tdx-dev.noxprotocol.dev";
+const NOX_GATEWAY =
+  process.env.NOX_GATEWAY_URL ??
+  "https://2e1800fc0dddeeadc189283ed1dce13c1ae28d48-3000.apps.ovh-tdx-dev.noxprotocol.dev";
 
 async function encryptForVault(params: {
   atomicAmount: bigint;

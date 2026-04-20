@@ -16,6 +16,7 @@
  * Optional:
  *   WEBHOOK_URL                  — Discord/Slack-compatible webhook for execution alerts
  *   WEBHOOK_ENABLED              — Set "false" to suppress webhook even if WEBHOOK_URL is set
+ *   NOX_GATEWAY_URL              — Nox TEE gateway endpoint (has hardcoded default, override when endpoint rotates)
  *   EXECUTION_PAUSED             — Set "true" to hard-pause all execution at startup
  *   APP_ENV                      — dev | staging | prod (default: dev)
  *   API_PORT                     — HTTP port (default: 3001)

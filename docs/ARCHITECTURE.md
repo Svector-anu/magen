@@ -241,3 +241,17 @@ WRAP_AMOUNT_USDC=10 npx tsx src/scripts/fund-and-wrap.ts
 ```bash
 npx tsx src/scripts/inspect-chain.ts
 ```
+
+---
+
+## Cancelling a Policy ("continue-until-revoked")
+
+When a user creates a `continue-until-revoked` policy and later wants to stop it:
+
+1. The frontend policy list shows the active policy
+2. User clicks **cancel** — fires `DELETE /api/policies/:id`
+3. DB sets `status = 'cancelled'`
+4. Scheduler's `listDuePolicies()` only picks up `status = 'active'` — no new jobs are ever queued
+5. Any already-queued in-flight job executes once more, then the policy is permanently stopped
+
+**Known gap (deferred to pre-mainnet):** Cancelling in the DB does not revoke the on-chain `isOperator(payer, vault)` authorization on `WrappedUSDC`. The vault technically retains operator permission until the original deadline expires. In practice this is safe because the API server is the only caller of `DisbursementAgent.execute()` — cancelling the policy prevents any further API calls. For full on-chain revocation, the payer should call `setOperator(vault, 0)` directly. This should be wired into the cancel flow before mainnet.
