@@ -1,6 +1,6 @@
 import type { DisbursementPolicy, Contact } from "@magen/shared";
 
-const BASE = "/api";
+const BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
