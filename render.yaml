@@ -3,7 +3,7 @@ services:
     type: web
     runtime: node
     plan: free
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
+    buildCommand: pnpm install --frozen-lockfile && pnpm rebuild better-sqlite3 && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
     startCommand: node packages/api/dist/index.js
     healthCheckPath: /health
     envVars:
