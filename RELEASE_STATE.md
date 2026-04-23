@@ -95,6 +95,7 @@ Browser → magen-frontend (Vite/React, static)
 | `GROQ_API_KEY` | Groq API key |
 | `OPENAI_API_KEY` | OpenAI API key (fallback parser) |
 | `FRONTEND_URL` | `https://magen-frontend.onrender.com` |
+| `NOX_GATEWAY_URL` | Nox TEE gateway endpoint (optional — defaults to dev endpoint hardcoded in `executePolicy.ts`) |
 | `ADMIN_TOKEN` | **Not set yet** — set before using pause endpoint |
 | `APP_ENV` | `dev` (set to `prod` before mainnet) |
 

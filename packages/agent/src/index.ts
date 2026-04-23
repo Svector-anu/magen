@@ -46,7 +46,7 @@ async function executeJob(job: Job): Promise<void> {
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.detail ?? data.error ?? `execute failed: ${res.status}`);
+    throw new Error(data.error ?? `execute failed: ${res.status}`);
   }
   console.log(`[agent] job ${job.id} done — txHash: ${data.txHash}`);
 }
