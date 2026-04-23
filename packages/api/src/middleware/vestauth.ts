@@ -24,6 +24,7 @@ export async function requireAgent(req: Request, res: Response, next: NextFuncti
     await vestauth.primitives.verify(req.method, url, req.headers, {}, publicJwk);
     next();
   } catch (err) {
-    res.status(401).json({ error: "Unauthorized", detail: err instanceof Error ? err.message : String(err) });
+    console.error("[vestauth] reject:", err instanceof Error ? err.message : String(err));
+    res.status(401).json({ error: "Unauthorized" });
   }
 }

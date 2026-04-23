@@ -18,6 +18,8 @@ import { validateEnv } from "./services/config.js";
 validateEnv();
 
 const app = express();
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
 const port = Number(process.env.API_PORT ?? 3001);
 
 app.use(cors({ origin: process.env.FRONTEND_URL ?? "http://localhost:5173" }));

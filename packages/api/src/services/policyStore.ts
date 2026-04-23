@@ -4,6 +4,7 @@ import type { DisbursementPolicy } from "@magen/shared";
 
 export interface StoredPolicy {
   id: string;
+  owner_wallet: string;
   recipient_wallet: string;
   recipient_display_name: string;
   amount_usdc: string;
@@ -32,7 +33,7 @@ function nextExecutionDate(frequency: string, from: Date): Date | null {
   return d;
 }
 
-export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): StoredPolicy {
+export function createPolicy(policy: DisbursementPolicy, vaultAddress: string, ownerWallet: string): StoredPolicy {
   const db = getDb();
   const now = new Date();
   const startDate = new Date(policy.start_date);
@@ -40,6 +41,7 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
 
   const row: StoredPolicy = {
     id: policy.id,
+    owner_wallet: ownerWallet,
     recipient_wallet: policy.recipient_wallet,
     recipient_display_name: policy.recipient_display_name,
     amount_usdc: policy.amount_usdc,
@@ -60,11 +62,11 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
   );
   db.prepare(`
     INSERT INTO policies (
-      id, recipient_wallet, recipient_display_name, amount_usdc, frequency,
+      id, owner_wallet, recipient_wallet, recipient_display_name, amount_usdc, frequency,
       approval_mode, start_date, end_date, approval_period_end, memo,
       vault_address, status, last_executed_at, next_execution_at, created_at
     ) VALUES (
-      @id, @recipient_wallet, @recipient_display_name, @amount_usdc, @frequency,
+      @id, @owner_wallet, @recipient_wallet, @recipient_display_name, @amount_usdc, @frequency,
       @approval_mode, @start_date, @end_date, @approval_period_end, @memo,
       @vault_address, @status, @last_executed_at, @next_execution_at, @created_at
     )
@@ -73,16 +75,16 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string): 
   return row;
 }
 
-export function listActivePolicies(): StoredPolicy[] {
+export function listActivePolicies(ownerWallet: string): StoredPolicy[] {
   return getDb()
-    .prepare(`SELECT * FROM policies WHERE status = 'active' ORDER BY created_at DESC`)
-    .all() as unknown as StoredPolicy[];
+    .prepare(`SELECT * FROM policies WHERE status = 'active' AND owner_wallet = ? ORDER BY created_at DESC`)
+    .all(ownerWallet) as unknown as StoredPolicy[];
 }
 
-export function cancelPolicy(id: string): boolean {
+export function cancelPolicy(id: string, ownerWallet: string): boolean {
   const result = getDb()
-    .prepare(`UPDATE policies SET status = 'cancelled' WHERE id = ? AND status = 'active'`)
-    .run(id);
+    .prepare(`UPDATE policies SET status = 'cancelled' WHERE id = ? AND owner_wallet = ? AND status = 'active'`)
+    .run(id, ownerWallet);
   return result.changes > 0;
 }
 

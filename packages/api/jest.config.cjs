@@ -13,6 +13,7 @@ module.exports = {
       "ts-jest",
       {
         useESM: true,
+        diagnostics: { ignoreCodes: [1343, 151002] },
         tsconfig: {
           module: "ESNext",
           target: "ES2022",

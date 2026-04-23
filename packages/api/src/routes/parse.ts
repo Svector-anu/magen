@@ -1,14 +1,23 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { parseInstruction } from "../services/parseInstruction.js";
 
 export const parseRouter = Router();
+
+const parseLimiter = rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.PARSE_RATE_LIMIT ?? 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
 
 const RequestSchema = z.object({
   instruction: z.string().min(1).max(2000),
 });
 
-parseRouter.post("/parse-instruction", async (req: Request, res: Response) => {
+parseRouter.post("/parse-instruction", parseLimiter, async (req: Request, res: Response) => {
   const body = RequestSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({
@@ -27,7 +36,6 @@ parseRouter.post("/parse-instruction", async (req: Request, res: Response) => {
           ? "recipient_unresolved"
           : "validation_failed",
         validationErrors: result.validationErrors,
-        rawLlmOutput: result.rawLlmOutput,
         enrichment: result.enrichment,
       });
       return;

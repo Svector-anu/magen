@@ -19,6 +19,7 @@ function migrate(db: DatabaseSync): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS policies (
       id                  TEXT PRIMARY KEY,
+      owner_wallet        TEXT NOT NULL DEFAULT '',
       recipient_wallet    TEXT NOT NULL,
       recipient_display_name TEXT NOT NULL,
       amount_usdc         TEXT NOT NULL,
@@ -54,6 +55,7 @@ function migrate(db: DatabaseSync): void {
   for (const col of [
     "ALTER TABLE jobs ADD COLUMN attempt INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE jobs ADD COLUMN next_retry_at TEXT",
+    "ALTER TABLE policies ADD COLUMN owner_wallet TEXT NOT NULL DEFAULT ''",
   ]) {
     try { db.exec(col); } catch { /* column already exists */ }
   }

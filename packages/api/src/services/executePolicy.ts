@@ -1,4 +1,6 @@
-import { JsonRpcProvider, Wallet, Contract, id as keccak256Id, getAddress } from "ethers";
+import { JsonRpcProvider, Wallet, Contract, Interface, id as keccak256Id, getAddress } from "ethers";
+import { createEthersHandleClient } from "@iexec-nox/handle";
+import type { Handle } from "@iexec-nox/handle";
 
 const NOX_GATEWAY =
   process.env.NOX_GATEWAY_URL ??
@@ -54,7 +56,19 @@ const AGENT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "vault", type: "address" },
+      { indexed: true, internalType: "bytes32", name: "policyId", type: "bytes32" },
+      { indexed: false, internalType: "bytes32", name: "transferredHandle", type: "bytes32" },
+    ],
+    name: "ExecutionRouted",
+    type: "event",
+  },
 ] as const;
+
+const AGENT_IFACE = new Interface(AGENT_ABI as unknown as never[]);
 
 function usdcToAtomic(amountUsdc: string): bigint {
   const [whole, frac = ""] = amountUsdc.split(".");
@@ -93,11 +107,10 @@ export async function executePolicy(params: {
   const { handle, handleProof } = await encryptForVault({
     atomicAmount,
     vaultAddress: checksummedVault,
-    wrappedUsdcAddress: wrappedUsdcAddress.toLowerCase(),
+    wrappedUsdcAddress: getAddress(wrappedUsdcAddress),
   });
 
-  const agent = new Contract(agentAddress, AGENT_ABI, wallet);
-
+  const agent = new Contract(agentAddress, AGENT_ABI as unknown as never[], wallet);
   const policyIdBytes32 = keccak256Id(policyId);
 
   const tx = await agent.execute(
@@ -113,5 +126,26 @@ export async function executePolicy(params: {
   );
 
   const receipt = await tx.wait();
+
+  const routedLog = receipt.logs
+    .map((log: { topics: string[]; data: string }) => {
+      try { return AGENT_IFACE.parseLog(log); } catch { return null; }
+    })
+    .find((parsed: { name: string } | null) => parsed?.name === "ExecutionRouted");
+
+  if (routedLog) {
+    const transferredHandle = routedLog.args.transferredHandle as string;
+    try {
+      const noxClient = await createEthersHandleClient(wallet);
+      const { value } = await noxClient.decrypt(transferredHandle as Handle<"uint256">);
+      if (value === 0n) {
+        throw new Error("Silent zero transfer — vault has insufficient wrapped USDC balance");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("Silent zero transfer")) throw err;
+      console.error("[executePolicy] handle decrypt skipped:", err instanceof Error ? err.message : String(err));
+    }
+  }
+
   return { txHash: receipt.hash };
 }

@@ -85,14 +85,14 @@ executeRouter.post("/execute", requireAgent, async (req: Request, res: Response)
       const delayMs = RETRY_DELAYS_MS[job.attempt] ?? RETRY_DELAYS_MS.at(-1)!;
       const retryAt = new Date(Date.now() + delayMs).toISOString();
       updateJob(jobId, { status: "pending", attempt: nextAttempt, next_retry_at: retryAt, error: detail });
-      console.error(`[execute] job ${jobId} attempt ${nextAttempt}/${MAX_ATTEMPTS}, retry at ${retryAt}`);
-      res.status(500).json({ error: "Internal error", detail, retryAt });
+      console.error(`[execute] job ${jobId} attempt ${nextAttempt}/${MAX_ATTEMPTS}, retry at ${retryAt}:`, detail);
+      res.status(500).json({ error: "Execution failed, will retry", retryAt });
     } else {
       updateJob(jobId, { status: "failed", attempt: nextAttempt, error: detail });
       pausePolicy(policy.id);
       const reason = permanent ? "permanent error" : `exhausted ${MAX_ATTEMPTS} attempts`;
-      console.error(`[execute] job ${jobId} ${reason} — policy ${policy.id} paused`);
-      res.status(500).json({ error: "Internal error", detail });
+      console.error(`[execute] job ${jobId} ${reason} — policy ${policy.id} paused:`, detail);
+      res.status(500).json({ error: "Execution failed" });
     }
   }
 });
