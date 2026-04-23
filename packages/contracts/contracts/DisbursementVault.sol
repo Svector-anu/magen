@@ -51,6 +51,7 @@ contract DisbursementVault {
             inputProof
         );
         Nox.allowThis(transferred);
+        Nox.allow(transferred, agent);
 
         emit DisbursementExecuted(policyId, recipient);
         return transferred;

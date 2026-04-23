@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {euint256, externalEuint256} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
+import {Nox, euint256, externalEuint256} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 import {DisbursementVault} from "./DisbursementVault.sol";
 
 /**
@@ -16,7 +16,7 @@ contract DisbursementAgent {
 
     error UnauthorizedCaller(address caller);
 
-    event ExecutionRouted(address indexed vault, bytes32 indexed policyId);
+    event ExecutionRouted(address indexed vault, bytes32 indexed policyId, bytes32 transferredHandle);
 
     constructor(address _owner) {
         owner = _owner;
@@ -39,13 +39,16 @@ contract DisbursementAgent {
     ) external {
         if (msg.sender != owner) revert UnauthorizedCaller(msg.sender);
 
-        emit ExecutionRouted(vault, policyId);
-
-        DisbursementVault(vault).executeDisbursement(
+        euint256 transferred = DisbursementVault(vault).executeDisbursement(
             recipient,
             encryptedAmount,
             inputProof,
             policyId
         );
+
+        Nox.allowThis(transferred);
+        Nox.allow(transferred, owner);
+
+        emit ExecutionRouted(vault, policyId, euint256.unwrap(transferred));
     }
 }
