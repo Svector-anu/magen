@@ -2,10 +2,47 @@ import type { DisbursementPolicy, Contact } from "@magen/shared";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
+// Must stay in sync with SIG_WINDOW_MINUTES on the server (default 5).
+// Refresh 1 minute before server would reject it.
+export const WALLET_SIG_REFRESH_MINUTES = 4;
+
+export function currentMinute(): number {
+  return Math.floor(Date.now() / 60_000);
+}
+
+export function walletMessage(action: string, minute: number): string {
+  return `magen:${action}:${minute}`;
+}
+
+function walletHeaders(address: string, sig: string, minute: number): Record<string, string> {
+  return {
+    "X-Wallet-Address": address,
+    "X-Wallet-Signature": sig,
+    "X-Wallet-Timestamp": String(minute),
+  };
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error ?? "Request failed"), { data });
+  return data as T;
+}
+
+async function postWithWallet<T>(
+  path: string,
+  body: unknown,
+  address: string,
+  sig: string,
+  minute: number,
+): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...walletHeaders(address, sig, minute) },
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -20,8 +57,25 @@ async function get<T>(path: string): Promise<T> {
   return data as T;
 }
 
+async function getWithWallet<T>(path: string, address: string, sig: string, minute: number): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: walletHeaders(address, sig, minute),
+  });
+  const data = await res.json();
+  if (!res.ok) throw Object.assign(new Error(data.error ?? "Request failed"), { data });
+  return data as T;
+}
+
 async function del(path: string): Promise<void> {
   const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) throw new Error("Delete failed");
+}
+
+async function delWithWallet(path: string, address: string, sig: string, minute: number): Promise<void> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: walletHeaders(address, sig, minute),
+  });
   if (!res.ok && res.status !== 204) throw new Error("Delete failed");
 }
 
@@ -33,7 +87,6 @@ export interface ParseResponse {
 export interface ParseErrorResponse {
   error: string;
   validationErrors: string[];
-  rawLlmOutput: object;
   enrichment: object;
 }
 
@@ -57,11 +110,15 @@ export const api = {
 
   deleteContact: (id: string) => del(`/contacts/${id}`),
 
-  savePolicy: (params: { policy: DisbursementPolicy; vaultAddress: string }) =>
-    post<{ policyId: string; jobId: string }>("/policies", params),
+  savePolicy: (
+    params: { policy: DisbursementPolicy; vaultAddress: string },
+    address: string,
+    sig: string,
+    minute: number,
+  ) => postWithWallet<{ policyId: string; jobId: string }>("/policies", params, address, sig, minute),
 
-  listPolicies: () =>
-    get<{
+  listPolicies: (address: string, sig: string, minute: number) =>
+    getWithWallet<{
       id: string;
       recipient_display_name: string;
       recipient_wallet: string;
@@ -69,9 +126,10 @@ export const api = {
       frequency: string;
       next_execution_at: string;
       status: string;
-    }[]>("/policies"),
+    }[]>("/policies", address, sig, minute),
 
-  cancelPolicy: (id: string) => del(`/policies/${id}`),
+  cancelPolicy: (id: string, address: string, sig: string, minute: number) =>
+    delWithWallet(`/policies/${id}`, address, sig, minute),
 
   getJobStatus: (jobId: string) =>
     get<{ id: string; status: string; txHash?: string; error?: string }>(`/jobs/${jobId}`),

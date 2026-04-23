@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { walletMessage, currentMinute } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { CONTRACTS_READY, VAULT_ADDRESS } from "../lib/contracts.js";
 import { useSetOperator, useIsOperator, computeDeadline, deadlineLabel } from "../hooks/useApprove.js";
@@ -15,6 +16,7 @@ interface Props {
 export function ApproveModal({ policy, onClose }: Props) {
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
+  const { signMessageAsync } = useSignMessage();
   const { data: alreadyOperator, isLoading: checkingOperator } = useIsOperator(address);
   const { setOperator, hash, isPending, isConfirming, isSuccess, error, reset } = useSetOperator();
   const [jobId, setJobId] = useState<string | null>(null);
@@ -30,18 +32,24 @@ export function ApproveModal({ policy, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Step 1: save policy + queue first job once operator is confirmed
+  // Step 1: save policy + queue first job once operator is confirmed.
+  // Requires a fresh wallet signature to prove ownership — a MetaMask sign prompt
+  // appears after the setOperator tx confirms.
   useEffect(() => {
-    if (!isSuccess || !VAULT_ADDRESS || isExecuting || jobId || execTxHash || execError) return;
+    if (!isSuccess || !VAULT_ADDRESS || !address || isExecuting || jobId || execTxHash || execError) return;
     setIsExecuting(true);
-    api
-      .savePolicy({ policy, vaultAddress: VAULT_ADDRESS })
+    const minute = currentMinute();
+    signMessageAsync({ message: walletMessage("save-policy", minute) })
+      .then((sig) => {
+        if (!address || !VAULT_ADDRESS) throw new Error("Wallet or vault not available");
+        return api.savePolicy({ policy, vaultAddress: VAULT_ADDRESS }, String(address), sig, minute);
+      })
       .then((res) => setJobId(res.jobId))
       .catch((err: unknown) => {
         setExecError(err instanceof Error ? err.message : String(err));
         setIsExecuting(false);
       });
-  }, [isSuccess, policy, isExecuting, jobId, execTxHash, execError]);
+  }, [isSuccess, policy, isExecuting, jobId, execTxHash, execError, address, signMessageAsync]);
 
   // Step 2: poll job status until done or failed
   useEffect(() => {

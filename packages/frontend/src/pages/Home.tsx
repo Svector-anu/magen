@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { api } from "../lib/api.js";
+import { useAccount, useSignMessage } from "wagmi";
+import { api, walletMessage, currentMinute, WALLET_SIG_REFRESH_MINUTES } from "../lib/api.js";
 import type { ParseErrorResponse } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { ApproveModal } from "../components/ApproveModal.js";
@@ -62,14 +63,46 @@ export function Home() {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [approveOpen, setApproveOpen] = useState(false);
   const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
+  const [walletAuth, setWalletAuth] = useState<{ sig: string; minute: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const refreshPolicies = useCallback(() => {
-    api.listPolicies().then(setActivePolicies).catch(() => {});
-  }, []);
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+
+  const signForList = useCallback(async (): Promise<{ sig: string; minute: number } | null> => {
+    if (!address) return null;
+    const minute = currentMinute();
+    try {
+      const sig = await signMessageAsync({ message: walletMessage("list-policies", minute) });
+      const auth = { sig, minute };
+      setWalletAuth(auth);
+      return auth;
+    } catch {
+      return null;
+    }
+  }, [address, signMessageAsync]);
 
   useEffect(() => {
-    refreshPolicies();
+    if (!address) {
+      setWalletAuth(null);
+      setActivePolicies([]);
+      return;
+    }
+    signForList();
+  }, [address, signForList]);
+
+  const refreshPolicies = useCallback(async () => {
+    if (!address) return;
+    let auth = walletAuth;
+    if (!auth || currentMinute() - auth.minute >= WALLET_SIG_REFRESH_MINUTES) {
+      auth = await signForList();
+    }
+    if (!auth) return;
+    api.listPolicies(address, auth.sig, auth.minute).then(setActivePolicies).catch(() => {});
+  }, [address, walletAuth, signForList]);
+
+  useEffect(() => {
+    void refreshPolicies();
   }, [refreshPolicies]);
 
   useEffect(() => {
@@ -105,8 +138,15 @@ export function Home() {
   }
 
   async function handleCancel(id: string) {
-    await api.cancelPolicy(id).catch(() => {});
-    refreshPolicies();
+    if (!address) return;
+    const minute = currentMinute();
+    try {
+      const sig = await signMessageAsync({ message: walletMessage("cancel-policy", minute) });
+      await api.cancelPolicy(id, String(address), sig, minute);
+    } catch {
+      // user rejected sign or delete failed — do nothing
+    }
+    void refreshPolicies();
   }
 
   const canParse = instruction.trim().length > 0 && stage !== "parsing";
@@ -186,7 +226,7 @@ export function Home() {
             policy={policy}
             onClose={() => {
               setApproveOpen(false);
-              refreshPolicies();
+              void refreshPolicies();
             }}
           />
         )}
