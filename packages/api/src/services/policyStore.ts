@@ -117,6 +117,73 @@ export function pausePolicy(id: string): void {
     .run(id);
 }
 
+export interface DashboardData {
+  stats: {
+    active_policies: number;
+    total_policies: number;
+    jobs_executed: number;
+    jobs_pending: number;
+    jobs_failed: number;
+    success_rate: number;
+  };
+  policies: StoredPolicy[];
+  recent_jobs: {
+    id: string;
+    policy_id: string;
+    status: string;
+    tx_hash: string | null;
+    error: string | null;
+    created_at: string;
+    recipient_display_name: string;
+    frequency: string;
+  }[];
+}
+
+export function getDashboardData(ownerWallet: string): DashboardData {
+  const db = getDb();
+
+  const policies = db.prepare(
+    `SELECT * FROM policies WHERE owner_wallet = ? ORDER BY created_at DESC`
+  ).all(ownerWallet) as unknown as StoredPolicy[];
+
+  const counts = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN j.status = 'done' THEN 1 END)                    AS executed,
+      COUNT(CASE WHEN j.status IN ('pending', 'processing') THEN 1 END) AS pending,
+      COUNT(CASE WHEN j.status = 'failed' THEN 1 END)                  AS failed
+    FROM jobs j
+    JOIN policies p ON j.policy_id = p.id
+    WHERE p.owner_wallet = ?
+  `).get(ownerWallet) as { executed: number; pending: number; failed: number };
+
+  const recent_jobs = db.prepare(`
+    SELECT j.id, j.policy_id, j.status, j.tx_hash, j.error, j.created_at,
+           p.recipient_display_name, p.frequency
+    FROM jobs j
+    JOIN policies p ON j.policy_id = p.id
+    WHERE p.owner_wallet = ?
+    ORDER BY j.created_at DESC
+    LIMIT 20
+  `).all(ownerWallet) as unknown as DashboardData["recent_jobs"];
+
+  const executed = counts?.executed ?? 0;
+  const failed = counts?.failed ?? 0;
+  const total_finished = executed + failed;
+
+  return {
+    stats: {
+      active_policies: policies.filter((p) => p.status === "active").length,
+      total_policies: policies.length,
+      jobs_executed: executed,
+      jobs_pending: counts?.pending ?? 0,
+      jobs_failed: failed,
+      success_rate: total_finished === 0 ? 0 : Math.round((executed / total_finished) * 100),
+    },
+    policies,
+    recent_jobs,
+  };
+}
+
 export function advancePolicy(id: string, executedAt: Date): void {
   const db = getDb();
   const policy = db.prepare(`SELECT * FROM policies WHERE id = ?`).get(id) as unknown as StoredPolicy | undefined;

@@ -79,6 +79,42 @@ async function delWithWallet(path: string, address: string, sig: string, minute:
   if (!res.ok && res.status !== 204) throw new Error("Delete failed");
 }
 
+export interface DashboardPolicy {
+  id: string;
+  recipient_display_name: string;
+  recipient_wallet: string;
+  amount_usdc: string;
+  frequency: string;
+  status: string;
+  next_execution_at: string;
+  last_executed_at: string | null;
+  created_at: string;
+}
+
+export interface DashboardJob {
+  id: string;
+  policy_id: string;
+  status: string;
+  tx_hash: string | null;
+  error: string | null;
+  created_at: string;
+  recipient_display_name: string;
+  frequency: string;
+}
+
+export interface DashboardData {
+  stats: {
+    active_policies: number;
+    total_policies: number;
+    jobs_executed: number;
+    jobs_pending: number;
+    jobs_failed: number;
+    success_rate: number;
+  };
+  policies: DashboardPolicy[];
+  recent_jobs: DashboardJob[];
+}
+
 export interface ParseResponse {
   policy: DisbursementPolicy;
   enrichment: { onChainContext?: string };
@@ -133,4 +169,7 @@ export const api = {
 
   getJobStatus: (jobId: string) =>
     get<{ id: string; status: string; txHash?: string; error?: string }>(`/jobs/${jobId}`),
+
+  getDashboard: (address: string, sig: string, minute: number) =>
+    getWithWallet<DashboardData>("/dashboard", address, sig, minute),
 };

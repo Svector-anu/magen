@@ -48,6 +48,34 @@
   letter-spacing: 0.08em;
 }
 
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.navLink {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.navLink:hover {
+  color: var(--text);
+}
+
+.navActive {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}
+
 .main {
   flex: 1;
   padding-top: 52px;

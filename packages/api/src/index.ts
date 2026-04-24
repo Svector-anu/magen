@@ -8,6 +8,7 @@ import { contactsRouter } from "./routes/contacts.js";
 import { executeRouter } from "./routes/execute.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { policiesRouter } from "./routes/policies.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 import { adminRouter } from "./routes/admin.js";
 import { listDuePolicies } from "./services/policyStore.js";
 import { createJob } from "./services/jobStore.js";
@@ -31,6 +32,7 @@ app.use("/api", contactsRouter);
 app.use("/api", executeRouter);
 app.use("/api", jobsRouter);
 app.use("/api", policiesRouter);
+app.use("/api", dashboardRouter);
 app.use("/api", adminRouter);
 
 const SCHEDULER_INTERVAL_MS = 30_000;
