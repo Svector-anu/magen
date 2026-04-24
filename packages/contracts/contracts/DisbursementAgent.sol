@@ -7,7 +7,8 @@ import {DisbursementVault} from "./DisbursementVault.sol";
 /**
  * @title DisbursementAgent
  * @notice Singleton contract that the off-chain Magen API server calls to execute disbursements.
- *         The server wallet must be the owner. Each vault must have this contract set as its agent.
+ *         The server wallet must be the owner. The shared vault handles any payer who has granted
+ *         operator access.
  *
  *         Keeps execution off the payer's key — the payer never needs to sign execution transactions.
  */
@@ -23,8 +24,9 @@ contract DisbursementAgent {
     }
 
     /**
-     * @notice Route a disbursement through a payer's vault. Only callable by the owner (API server wallet).
-     * @param vault            The payer's DisbursementVault contract.
+     * @notice Route a disbursement through the shared vault. Only callable by the owner (API server wallet).
+     * @param vault            The shared DisbursementVault contract.
+     * @param payer            The token holder whose operator approval covers this vault.
      * @param recipient        The disbursement recipient.
      * @param encryptedAmount  Encrypted USDC amount bound to wrappedUsdc address.
      * @param inputProof       Nox input proof from off-chain encryptInput().
@@ -32,6 +34,7 @@ contract DisbursementAgent {
      */
     function execute(
         address vault,
+        address payer,
         address recipient,
         externalEuint256 encryptedAmount,
         bytes calldata inputProof,
@@ -40,6 +43,7 @@ contract DisbursementAgent {
         if (msg.sender != owner) revert UnauthorizedCaller(msg.sender);
 
         euint256 transferred = DisbursementVault(vault).executeDisbursement(
+            payer,
             recipient,
             encryptedAmount,
             inputProof,

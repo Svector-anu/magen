@@ -150,7 +150,8 @@ export function Home() {
       <div className={styles.container}>
         <section className={styles.hero}>
           <h1 className={styles.headline}>
-            Automate payments.<br />Keep them private.
+            Automate payments.<br />
+            <span className={styles.headlineDim}>Keep them private.</span>
           </h1>
           <p className={styles.subheadline}>
             automate your payments — without exposing every detail.
@@ -159,7 +160,7 @@ export function Home() {
 
         <div className={styles.commandSection}>
           <div className={styles.inputWrap}>
-            <span className={styles.promptChar}>&gt;</span>
+            <span className={styles.promptChar}>magen&gt;</span>
             <textarea
               ref={textareaRef}
               className={styles.textarea}

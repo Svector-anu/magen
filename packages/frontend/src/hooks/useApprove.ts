@@ -1,4 +1,5 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { arbitrumSepolia } from "wagmi/chains";
 import { WRAPPED_USDC_ABI, WRAPPED_USDC_ADDRESS, VAULT_ADDRESS } from "../lib/contracts.js";
 
 export { computeDeadline, deadlineLabel } from "../lib/policy.js";
@@ -24,8 +25,7 @@ export function useSetOperator() {
       abi: WRAPPED_USDC_ABI,
       functionName: "setOperator",
       args: [VAULT_ADDRESS, deadline],
-      maxFeePerGas: 500_000_000n,
-      maxPriorityFeePerGas: 1_000_000n,
+      chainId: arbitrumSepolia.id,
     });
   }
 

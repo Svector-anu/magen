@@ -7,7 +7,6 @@ const ENS_PROVIDER = new ethers.JsonRpcProvider(
 );
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-const ENS_RE = /\.eth$/i;
 
 export type ResolveOutcome =
   | { status: "found"; contact: Contact }
@@ -15,16 +14,24 @@ export type ResolveOutcome =
   | { status: "address_only"; contact: Contact }
   | { status: "not_found" };
 
+async function tryEns(name: string): Promise<string | null> {
+  try {
+    return await ENS_PROVIDER.resolveName(name);
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveIdentifier(
   identifier: string
 ): Promise<ResolveOutcome> {
-  const trimmed = identifier.trim();
+  const trimmed = identifier.trim().toLowerCase();
 
   // 1. Exact match in contact store
   const existing = findByIdentifier(trimmed);
   if (existing) return { status: "found", contact: existing };
 
-  // 2. Raw EVM address — create an unconfirmed contact
+  // 2. Raw EVM address
   if (EVM_ADDRESS_RE.test(trimmed)) {
     const contact = upsertContact({
       display_name: trimmed.slice(0, 10) + "…",
@@ -35,22 +42,23 @@ export async function resolveIdentifier(
     return { status: "address_only", contact };
   }
 
-  // 3. ENS name — attempt on-chain resolution
-  if (ENS_RE.test(trimmed)) {
-    try {
-      const resolved = await ENS_PROVIDER.resolveName(trimmed);
-      if (resolved) {
-        const contact = upsertContact({
-          display_name: trimmed,
-          aliases: [],
-          ens_name: trimmed,
-          wallet_address: resolved,
-          resolution_status: "resolved",
-        });
-        return { status: "ens_resolved", contact };
-      }
-    } catch {
-      // ENS lookup failed — fall through to not_found
+  // 3. Strip leading @ (social handles: @alice.eth, @alice)
+  const bare = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+
+  // 4. Try ENS resolution — dotted name as-is, then bare-name.eth fallback
+  const candidates = bare.includes(".") ? [bare, `${bare}.eth`] : [`${bare}.eth`];
+
+  for (const candidate of candidates) {
+    const resolved = await tryEns(candidate);
+    if (resolved) {
+      const contact = upsertContact({
+        display_name: bare,
+        aliases: trimmed !== bare ? [trimmed] : [],
+        ens_name: candidate,
+        wallet_address: resolved,
+        resolution_status: "resolved",
+      });
+      return { status: "ens_resolved", contact };
     }
   }
 

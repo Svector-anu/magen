@@ -47,6 +47,7 @@ const AGENT_ABI = [
     inputs: [
       { internalType: "address", name: "vault", type: "address" },
       { internalType: "address", name: "recipient", type: "address" },
+      { internalType: "address", name: "payer", type: "address" },
       { internalType: "externalEuint256", name: "encryptedAmount", type: "bytes32" },
       { internalType: "bytes", name: "inputProof", type: "bytes" },
       { internalType: "bytes32", name: "policyId", type: "bytes32" },
@@ -82,11 +83,12 @@ export interface ExecuteResult {
 
 export async function executePolicy(params: {
   policyId: string;
+  payerWallet: string;
   recipientWallet: string;
   amountUsdc: string;
   vaultAddress: string;
 }): Promise<ExecuteResult> {
-  const { policyId, recipientWallet, amountUsdc, vaultAddress } = params;
+  const { policyId, payerWallet, recipientWallet, amountUsdc, vaultAddress } = params;
 
   const rpcUrl = process.env.ARBITRUM_SEPOLIA_RPC;
   const privateKey = process.env.PRIVATE_KEY;
@@ -101,6 +103,7 @@ export async function executePolicy(params: {
   const wallet = new Wallet(privateKey, provider);
 
   const atomicAmount = usdcToAtomic(amountUsdc);
+  const checksummedPayer = getAddress(payerWallet.toLowerCase());
   const checksummedRecipient = getAddress(recipientWallet.toLowerCase());
   const checksummedVault = getAddress(vaultAddress.toLowerCase());
 
@@ -115,14 +118,11 @@ export async function executePolicy(params: {
 
   const tx = await agent.execute(
     checksummedVault,
+    checksummedPayer,
     checksummedRecipient,
     handle,
     handleProof,
     policyIdBytes32,
-    {
-      maxFeePerGas: 500_000_000n,
-      maxPriorityFeePerGas: 1_000_000n,
-    }
   );
 
   const receipt = await tx.wait();

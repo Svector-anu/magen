@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { randomUUID } from "crypto";
 import { DisbursementPolicySchema, type DisbursementPolicy } from "@magen/shared";
 import { enrichWithChainGpt } from "./chainGptEnrich.js";
+import { resolveIdentifier } from "./resolveIdentifier.js";
 
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
@@ -87,13 +88,21 @@ export async function parseInstruction(
     (rawLlmOutput as Record<string, unknown>)["recipient_wallet"] === "UNRESOLVED";
 
   if (isUnresolved) {
-    return {
-      policy: null,
-      recipientUnresolved: true,
-      rawLlmOutput,
-      enrichment,
-      validationErrors: ["Recipient wallet address could not be determined"],
-    };
+    const displayName = String((rawLlmOutput as Record<string, unknown>)["recipient_display_name"] ?? "");
+    const outcome = displayName ? await resolveIdentifier(displayName) : { status: "not_found" as const };
+
+    if (outcome.status !== "not_found") {
+      (rawLlmOutput as Record<string, unknown>)["recipient_wallet"] = outcome.contact.wallet_address;
+      (rawLlmOutput as Record<string, unknown>)["recipient_display_name"] = outcome.contact.display_name;
+    } else {
+      return {
+        policy: null,
+        recipientUnresolved: true,
+        rawLlmOutput,
+        enrichment,
+        validationErrors: [`Could not resolve "${displayName}" to a wallet address`],
+      };
+    }
   }
 
   const candidate = {

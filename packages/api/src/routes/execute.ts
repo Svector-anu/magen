@@ -63,6 +63,7 @@ executeRouter.post("/execute", requireAgent, async (req: Request, res: Response)
   try {
     const result = await executePolicy({
       policyId: policy.id,
+      payerWallet: policy.owner_wallet,
       recipientWallet: policy.recipient_wallet,
       amountUsdc: policy.amount_usdc,
       vaultAddress: policy.vault_address,

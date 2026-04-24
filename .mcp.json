@@ -3,6 +3,10 @@
     "xai-docs": {
       "type": "http",
       "url": "https://docs.x.ai/api/mcp"
+    },
+    "aidesigner": {
+      "type": "http",
+      "url": "https://api.aidesigner.ai/api/v1/mcp"
     }
   }
 }

@@ -42,11 +42,11 @@ async function main() {
   const agentAddress = await agent.getAddress();
   console.log("DisbursementAgent:", agentAddress);
 
-  // Deploy DisbursementVault — payer = deployer wallet (test vault)
+  // Deploy DisbursementVault — shared vault, no hardcoded payer
   const vaultArtifact = loadArtifact("DisbursementVault");
   const vaultFactory = new ethers.ContractFactory(vaultArtifact.abi, vaultArtifact.bytecode, wallet);
   console.log("Deploying DisbursementVault...");
-  const vault = await vaultFactory.deploy(WRAPPED_USDC, agentAddress, wallet.address, overrides);
+  const vault = await vaultFactory.deploy(WRAPPED_USDC, agentAddress, overrides);
   await vault.waitForDeployment();
   const vaultAddress = await vault.getAddress();
   console.log("DisbursementVault:", vaultAddress);
