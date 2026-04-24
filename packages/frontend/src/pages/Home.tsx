@@ -8,10 +8,10 @@ import { ApproveModal } from "../components/ApproveModal.js";
 import styles from "./Home.module.css";
 
 const PLACEHOLDERS = [
-  "pay alice.eth 500 USDC every month, auto-approve for 3 months",
-  "send 0x742d35Cc6634C0532925a3b8D4C9E4 a one-time 1000 USDC",
-  "pay bob@company.com 250 USDC weekly until I say stop",
-  "send contractor.eth 750 USDC on the 1st of every month",
+  "pay dev 200 USDC weekly",
+  "send alice 500 USDC every month",
+  "pay contractor.eth 750 USDC on the 1st",
+  "send 50 USDC to bob every friday",
 ];
 
 interface PolicyCardData {
@@ -150,11 +150,10 @@ export function Home() {
       <div className={styles.container}>
         <section className={styles.hero}>
           <h1 className={styles.headline}>
-            TELL MAGEN<br />WHAT TO PAY
+            Automate payments.<br />Keep them private.
           </h1>
           <p className={styles.subheadline}>
-            Magen turns plain English into private, recurring onchain payments.{" "}
-            <span className={styles.subEmphasis}>No forms. No exposure.</span>
+            automate your payments — without exposing every detail.
           </p>
         </section>
 
@@ -179,11 +178,13 @@ export function Home() {
             )}
           </div>
 
+          <p className={styles.helperText}>describe your payment in plain english</p>
+
           <div className={styles.actions}>
             <div className={styles.actionsLeft}>
               {stage === "resolved" ? (
                 <button className={styles.btnGhost} onClick={handleReset}>
-                  ← new instruction
+                  ← start over
                 </button>
               ) : (
                 <button
@@ -193,10 +194,10 @@ export function Home() {
                 >
                   {stage === "parsing" ? (
                     <span className={styles.parsing}>
-                      parsing<Dots />
+                      setting it up…
                     </span>
                   ) : (
-                    "parse ▸"
+                    "Start a payment"
                   )}
                 </button>
               )}
@@ -248,7 +249,7 @@ export function Home() {
         {activePolicies.length > 0 && (
           <div className={styles.policyList}>
             <div className={styles.policyListHeader}>
-              <span className={styles.slash}>//</span> active policies
+              active payments
             </div>
             {activePolicies.map((p) => (
               <div key={p.id} className={styles.policyListRow}>
@@ -262,7 +263,7 @@ export function Home() {
                     <span className={styles.badgePaused}>paused</span>
                   )}
                   <span className={styles.policyListNext}>
-                    next: {fmtNextDate(p.next_execution_at)}
+                    next run: {fmtNextDate(p.next_execution_at)}
                   </span>
                   <button
                     className={styles.btnCancel}
@@ -374,7 +375,7 @@ function PolicyCard({
           disabled={isDemo}
           onClick={!isDemo ? onApprove : undefined}
         >
-          {isDemo ? "parse an instruction to approve" : "approve ▸"}
+          {isDemo ? "describe a payment above to continue" : "approve & schedule ▸"}
         </button>
         <span className={styles.policyId}>
           id: {isDemo ? "demo" : (data.id ?? "").slice(0, 8)}

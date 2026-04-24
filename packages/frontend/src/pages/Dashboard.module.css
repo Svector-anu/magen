@@ -193,6 +193,13 @@
   color: var(--blue-bright);
 }
 
+.privateTag {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 5px;
+  letter-spacing: 0.03em;
+}
+
 .errorCell {
   max-width: 220px;
 }

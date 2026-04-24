@@ -29,13 +29,23 @@ function relativeTime(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  done: "sent",
+  processing: "running",
+  expired: "ended",
+};
+
+function displayStatus(status: string): string {
+  return STATUS_LABEL[status] ?? status;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === "done" || status === "active" ? styles.badgeGreen :
     status === "pending" || status === "processing" ? styles.badgeAmber :
     status === "failed" ? styles.badgeRed :
     styles.badgeMuted;
-  return <span className={`${styles.badge} ${cls}`}>{status}</span>;
+  return <span className={`${styles.badge} ${cls}`}>{displayStatus(status)}</span>;
 }
 
 export function Dashboard() {
@@ -123,29 +133,29 @@ export function Dashboard() {
         <>
           {/* ── Stat cards ── */}
           <div className={styles.statsGrid}>
-            <StatCard label="Active Policies"  value={data.stats.active_policies}  />
-            <StatCard label="Total Policies"   value={data.stats.total_policies}   />
-            <StatCard label="Jobs Executed"    value={data.stats.jobs_executed}    accent="green" />
-            <StatCard label="Jobs Pending"     value={data.stats.jobs_pending}     accent="amber" />
-            <StatCard label="Jobs Failed"      value={data.stats.jobs_failed}      accent={data.stats.jobs_failed > 0 ? "red" : undefined} />
-            <StatCard label="Success Rate"     value={`${data.stats.success_rate}%`} accent={data.stats.success_rate === 100 ? "green" : undefined} />
+            <StatCard label="Active"       value={data.stats.active_policies}  />
+            <StatCard label="Total"        value={data.stats.total_policies}   />
+            <StatCard label="Sent"         value={data.stats.jobs_executed}    accent="green" />
+            <StatCard label="Pending"      value={data.stats.jobs_pending}     accent="amber" />
+            <StatCard label="Failed"       value={data.stats.jobs_failed}      accent={data.stats.jobs_failed > 0 ? "red" : undefined} />
+            <StatCard label="Success rate" value={`${data.stats.success_rate}%`} accent={data.stats.success_rate === 100 ? "green" : undefined} />
           </div>
 
           {/* ── Policies ── */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Policies</h2>
+            <h2 className={styles.sectionTitle}>Active Payments</h2>
             {data.policies.length === 0 ? (
-              <p className={styles.empty}>No policies yet.</p>
+              <p className={styles.empty}>No active payments. Start one above.</p>
             ) : (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Recipient</th>
+                      <th>To</th>
                       <th>Frequency</th>
                       <th>Status</th>
-                      <th>Next Execution</th>
-                      <th>Last Executed</th>
+                      <th>Next Run</th>
+                      <th>Last Run</th>
                       <th>Created</th>
                     </tr>
                   </thead>
@@ -176,20 +186,20 @@ export function Dashboard() {
 
           {/* ── Recent executions ── */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Recent Executions</h2>
+            <h2 className={styles.sectionTitle}>Recent Activity</h2>
             {data.recent_jobs.length === 0 ? (
-              <p className={styles.empty}>No executions yet.</p>
+              <p className={styles.empty}>No activity yet.</p>
             ) : (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Time</th>
-                      <th>Recipient</th>
+                      <th>When</th>
+                      <th>To</th>
                       <th>Frequency</th>
                       <th>Status</th>
-                      <th>Tx Hash</th>
-                      <th>Error</th>
+                      <th>Tx</th>
+                      <th>Note</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -200,7 +210,10 @@ export function Dashboard() {
                         </td>
                         <td className={styles.name}>{j.recipient_display_name}</td>
                         <td className={styles.muted}>{j.frequency}</td>
-                        <td><StatusBadge status={j.status} /></td>
+                        <td>
+                          <StatusBadge status={j.status} />
+                          {j.status === "done" && <span className={styles.privateTag}>· private</span>}
+                        </td>
                         <td className={styles.mono}>
                           {j.tx_hash ? (
                             <a
@@ -209,7 +222,7 @@ export function Dashboard() {
                               rel="noopener noreferrer"
                               className={styles.txLink}
                             >
-                              {truncate(j.tx_hash)}
+                              {truncate(j.tx_hash)} view ↗
                             </a>
                           ) : (
                             <span className={styles.muted}>—</span>
@@ -217,7 +230,7 @@ export function Dashboard() {
                         </td>
                         <td className={styles.errorCell}>
                           {j.error
-                            ? <span className={styles.errorText} title={j.error}>{truncate(j.error, 32)}</span>
+                            ? <span className={styles.errorText} title={j.error}>something went wrong. retrying automatically.</span>
                             : <span className={styles.muted}>—</span>}
                         </td>
                       </tr>

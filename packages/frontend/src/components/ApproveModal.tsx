@@ -87,7 +87,7 @@ export function ApproveModal({ policy, onClose }: Props) {
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.modalHeader}>
           <div className={styles.modalTitle}>
-            <span className={styles.slash}>//</span> authorize disbursement
+            confirm payment
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="close">✕</button>
         </div>
@@ -126,32 +126,24 @@ export function ApproveModal({ policy, onClose }: Props) {
           </div>
 
           <div className={styles.authBlock}>
-            <div className={styles.authLabel}>
-              <span className={styles.slash}>//</span> operator authorization
-            </div>
             <div className={styles.authExplain}>
-              Calling <code>setOperator</code> on WrappedUSDC grants the Magen vault
-              permission to execute payments on your behalf. Your balance remains
-              encrypted — only the vault can trigger transfers, and only within the
-              authorized window.
+              run scheduled payments from your wallet. your balance stays private — only the scheduled amount moves.
             </div>
             <div className={styles.authDetails}>
               <div className={styles.authRow}>
-                <span className={styles.authKey}>vault</span>
-                <span className={styles.authVal}>
-                  {vaultShort ?? <span className={styles.dimmed}>not configured</span>}
-                </span>
-              </div>
-              <div className={styles.authRow}>
-                <span className={styles.authKey}>authorized until</span>
+                <span className={styles.authKey}>runs until</span>
                 <span className={`${styles.authVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
                   {deadline}
                 </span>
               </div>
+              <div className={styles.authRow}>
+                <span className={styles.authKey}>privacy</span>
+                <span className={styles.authVal}>amount is hidden onchain by default</span>
+              </div>
               {alreadyOperator && !checkingOperator && (
                 <div className={styles.authRow}>
                   <span className={styles.authKey}>status</span>
-                  <span className={styles.green}>already active — re-signing extends deadline</span>
+                  <span className={styles.green}>approval active — signing again extends it</span>
                 </div>
               )}
             </div>
@@ -161,7 +153,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>✓</span>
               <div>
-                <div className={styles.successTitle}>operator authorized</div>
+                <div className={styles.successTitle}>wallet approved</div>
                 <a
                   className={styles.txLink}
                   href={`https://sepolia.arbiscan.io/tx/${hash}`}
@@ -178,7 +170,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>⏳</span>
               <div>
-                <div className={styles.successTitle}>executing disbursement…</div>
+                <div className={styles.successTitle}>running…</div>
               </div>
             </div>
           )}
@@ -187,7 +179,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>✓</span>
               <div>
-                <div className={styles.successTitle}>disbursement sent</div>
+                <div className={styles.successTitle}>payment sent (private)</div>
                 <a
                   className={styles.txLink}
                   href={`https://sepolia.arbiscan.io/tx/${execTxHash}`}
@@ -203,7 +195,7 @@ export function ApproveModal({ policy, onClose }: Props) {
           {execError && (
             <div className={styles.errorBlock}>
               <span className={styles.errorIcon}>✕</span>
-              <span className={styles.errorText}>execute failed: {execError}</span>
+              <span className={styles.errorText}>something went wrong. retrying automatically.</span>
             </div>
           )}
 
@@ -224,7 +216,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             </button>
           ) : !isConnected ? (
             <button className={styles.btnPrimary} onClick={openConnectModal}>
-              connect wallet to approve
+              connect wallet to continue
             </button>
           ) : (
             <>
@@ -240,7 +232,7 @@ export function ApproveModal({ policy, onClose }: Props) {
                   ? "sign in wallet…"
                   : isConfirming
                   ? "confirming…"
-                  : "confirm & sign ▸"}
+                  : "approve & sign ▸"}
               </button>
             </>
           )}
