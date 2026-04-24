@@ -1,5 +1,5 @@
 # Magen — Release State
-Last updated: 2026-04-20
+Last updated: 2026-04-24
 
 ---
 
@@ -33,8 +33,8 @@ Browser → magen-frontend (Vite/React, static)
 
 **Key contracts (Arbitrum Sepolia, chainId 421614)**
 - `WRAPPED_USDC_ADDRESS` = `0x0b6aCacf10fb1Ec0Ac66b9eCe71DB09b11eA2742`
-- `DISBURSEMENT_VAULT_ADDRESS` = `0x39B557adf435D360d054294a2Fe3322844308Eb3`
-- `DISBURSEMENT_AGENT_ADDRESS` = `0x0F3c2ab72F78477f9BeE916e0872Da18645B3b56`
+- `DISBURSEMENT_VAULT_ADDRESS` = `0xAa2AF33f6E1A96d8861222417471a082A3Fc674A`
+- `DISBURSEMENT_AGENT_ADDRESS` = `0xC19cBBD66e8d3210ce112ff2BCaF2BAe2FB7b358`
 - `USDC_ADDRESS` = `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d`
 
 **Database**: `node:sqlite` (built-in Node 22, no native compilation). DB file at `.magen.db` in CWD (ephemeral on Render — resets on redeploy).
