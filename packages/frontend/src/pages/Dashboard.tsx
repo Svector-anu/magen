@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
-import { api, walletMessage, currentMinute, WALLET_SIG_REFRESH_MINUTES } from "../lib/api.js";
+import { api } from "../lib/api.js";
+import { getCached, getOrSign } from "../lib/walletAuth.js";
 import type { DashboardData } from "../lib/api.js";
 import styles from "./Dashboard.module.css";
 
@@ -37,11 +38,6 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`${styles.badge} ${cls}`}>{status}</span>;
 }
 
-interface SigState {
-  sig: string;
-  minute: number;
-}
-
 export function Dashboard() {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -51,38 +47,44 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  const sigRef = useRef<SigState | null>(null);
+  // Stable ref so callbacks don't re-create when wagmi identity changes mid-connect
+  const signRef = useRef(signMessageAsync);
+  useEffect(() => { signRef.current = signMessageAsync; });
 
-  const getSig = useCallback(async (): Promise<SigState> => {
-    const minute = currentMinute();
-    if (sigRef.current && minute - sigRef.current.minute < WALLET_SIG_REFRESH_MINUTES) {
-      return sigRef.current;
-    }
-    const sig = await signMessageAsync({ message: walletMessage("list-policies", minute) });
-    sigRef.current = { sig, minute };
-    return sigRef.current;
-  }, [signMessageAsync]);
-
-  const load = useCallback(async (showLoader = false) => {
+  // foreground=true: sign if cache expired (user-initiated action)
+  // foreground=false: use cache only — never prompt MetaMask during auto-poll
+  const load = useCallback(async (foreground = false) => {
     if (!address) return;
-    if (showLoader) setLoading(true);
+
+    let auth = getCached(address, "list-policies");
+    if (!auth) {
+      if (!foreground) return; // skip background poll — don't surprise the user
+      if (foreground) setLoading(true);
+      try {
+        auth = await getOrSign(address, "list-policies", (msg) => signRef.current({ message: msg }));
+      } catch {
+        setError("Signature rejected — click refresh to try again");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-      const { sig, minute } = await getSig();
-      const result = await api.getDashboard(address, sig, minute);
+      const result = await api.getDashboard(address, auth.sig, auth.minute);
       setData(result);
       setError(null);
       setLastRefresh(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      if (foreground) setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
-      if (showLoader) setLoading(false);
+      if (foreground) setLoading(false);
     }
-  }, [address, getSig]);
+  }, [address]);
 
   useEffect(() => {
     if (!isConnected) return;
     load(true);
-    const id = setInterval(() => load(), POLL_MS);
+    const id = setInterval(() => load(false), POLL_MS);
     return () => clearInterval(id);
   }, [isConnected, load]);
 

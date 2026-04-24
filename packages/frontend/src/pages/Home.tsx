@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAccount, useSignMessage } from "wagmi";
-import { api, walletMessage, currentMinute, WALLET_SIG_REFRESH_MINUTES } from "../lib/api.js";
+import { api, walletMessage, currentMinute } from "../lib/api.js";
+import { getCached, getOrSign, invalidate } from "../lib/walletAuth.js";
 import type { ParseErrorResponse } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { ApproveModal } from "../components/ApproveModal.js";
@@ -63,47 +64,38 @@ export function Home() {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [approveOpen, setApproveOpen] = useState(false);
   const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
-  const [walletAuth, setWalletAuth] = useState<{ sig: string; minute: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
-  const signForList = useCallback(async (): Promise<{ sig: string; minute: number } | null> => {
-    if (!address) return null;
-    const minute = currentMinute();
-    try {
-      const sig = await signMessageAsync({ message: walletMessage("list-policies", minute) });
-      const auth = { sig, minute };
-      setWalletAuth(auth);
-      return auth;
-    } catch {
-      return null;
-    }
-  }, [address, signMessageAsync]);
-
-  useEffect(() => {
-    if (!address) {
-      setWalletAuth(null);
-      setActivePolicies([]);
-      return;
-    }
-    signForList();
-  }, [address, signForList]);
+  // Stable ref so callbacks don't re-create when wagmi identity changes mid-connect
+  const signRef = useRef(signMessageAsync);
+  useEffect(() => { signRef.current = signMessageAsync; });
 
   const refreshPolicies = useCallback(async () => {
     if (!address) return;
-    let auth = walletAuth;
-    if (!auth || currentMinute() - auth.minute >= WALLET_SIG_REFRESH_MINUTES) {
-      auth = await signForList();
+    try {
+      const { sig, minute } = await getOrSign(
+        address,
+        "list-policies",
+        (msg) => signRef.current({ message: msg }),
+      );
+      const policies = await api.listPolicies(address, sig, minute);
+      setActivePolicies(policies);
+    } catch {
+      // user rejected sign or request failed — leave list as-is
     }
-    if (!auth) return;
-    api.listPolicies(address, auth.sig, auth.minute).then(setActivePolicies).catch(() => {});
-  }, [address, walletAuth, signForList]);
+  }, [address]);
 
   useEffect(() => {
+    if (!address) {
+      invalidate(address ?? "");
+      setActivePolicies([]);
+      return;
+    }
     void refreshPolicies();
-  }, [refreshPolicies]);
+  }, [address, refreshPolicies]);
 
   useEffect(() => {
     const t = setInterval(
@@ -141,7 +133,7 @@ export function Home() {
     if (!address) return;
     const minute = currentMinute();
     try {
-      const sig = await signMessageAsync({ message: walletMessage("cancel-policy", minute) });
+      const sig = await signRef.current({ message: walletMessage("cancel-policy", minute) });
       await api.cancelPolicy(id, String(address), sig, minute);
     } catch {
       // user rejected sign or delete failed — do nothing
