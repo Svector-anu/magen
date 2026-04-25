@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160">
+  <!-- Mark: clean solid shield -->
+  <path d="M80 28 L112 40 L112 88 C112 112 98 130 80 138 C62 130 48 112 48 88 L48 40 Z"
+        fill="#2f81f7"/>
+
+  <!-- Wordmark -->
+  <text x="136" y="102"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="64"
+        font-weight="700"
+        letter-spacing="-1"
+        fill="#e6edf3">MAGEN</text>
+</svg>
