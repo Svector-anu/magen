@@ -81,3 +81,30 @@
   flex: 1;
   padding-top: 52px;
 }
+
+/* ── responsive ── */
+@media (max-width: 640px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .logoDivider,
+  .logoSub {
+    display: none;
+  }
+
+  .navLink {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .logoMark {
+    font-size: 12px;
+  }
+
+  .navLink {
+    padding: 3px 6px;
+  }
+}

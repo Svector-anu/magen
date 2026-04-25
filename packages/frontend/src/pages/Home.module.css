@@ -8,6 +8,29 @@
   overflow: hidden;
 }
 
+@media (max-width: 640px) {
+  .page {
+    padding: 64px 16px 80px;
+  }
+
+  .headline {
+    font-size: clamp(36px, 10vw, 56px);
+  }
+
+  .previewOuter {
+    border-radius: 8px;
+  }
+
+  .previewBody {
+    padding: 16px 16px 20px;
+  }
+
+  .pKey {
+    width: 72px;
+    padding-right: 16px;
+  }
+}
+
 .page::before {
   content: "";
   position: fixed;
