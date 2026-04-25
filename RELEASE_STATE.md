@@ -98,6 +98,7 @@ Browser → magen-frontend (Vite/React, static)
 | `NOX_GATEWAY_URL` | Nox TEE gateway endpoint (optional — defaults to dev endpoint hardcoded in `executePolicy.ts`) |
 | `ADMIN_TOKEN` | **Not set yet** — set before using pause endpoint |
 | `APP_ENV` | `dev` (set to `prod` before mainnet) |
+| `NEYNAR_API_KEY` | Neynar API key — enables Farcaster + X handle resolution. Get free key at neynar.com. Optional: omit to skip social resolution and fall through to ENS only. |
 
 ### magen-agent (Render)
 | Key | Value |
