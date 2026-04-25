@@ -11,10 +11,11 @@ import { policiesRouter } from "./routes/policies.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { adminRouter } from "./routes/admin.js";
 import { listDuePolicies } from "./services/policyStore.js";
-import { createJob } from "./services/jobStore.js";
+import { createJob, listPendingJobs } from "./services/jobStore.js";
 import { isPaused } from "./services/pause.js";
 import { notify } from "./services/notify.js";
 import { validateEnv } from "./services/config.js";
+import { runJob } from "./services/jobRunner.js";
 
 validateEnv();
 
@@ -54,8 +55,25 @@ function runScheduler(): void {
   }
 }
 
+const EXECUTOR_INTERVAL_MS = 5_000;
+
+async function runExecutor(): Promise<void> {
+  if (isPaused()) return;
+  try {
+    const jobs = listPendingJobs();
+    for (const job of jobs) {
+      console.log(`[executor] picking up job ${job.id}`);
+      await runJob(job.id);
+    }
+  } catch (err) {
+    console.error("[executor] error:", err);
+  }
+}
+
 app.listen(port, () => {
   console.log(`Magen API listening on port ${port}`);
   runScheduler();
   setInterval(runScheduler, SCHEDULER_INTERVAL_MS);
+  void runExecutor();
+  setInterval(() => void runExecutor(), EXECUTOR_INTERVAL_MS);
 });
