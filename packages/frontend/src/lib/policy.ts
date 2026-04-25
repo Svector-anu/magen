@@ -13,7 +13,8 @@ export function computeDeadline(policy: DisbursementPolicy): number {
   return Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
 }
 
-export function deadlineLabel(policy: DisbursementPolicy): string {
+export function deadlineLabel(policy: DisbursementPolicy): string | null {
+  if (policy.frequency === "once") return null;
   if (policy.approval_mode === "continue-until-revoked") return "until revoked";
   const ts = computeDeadline(policy);
   return new Date(ts * 1000).toLocaleDateString("en-US", {

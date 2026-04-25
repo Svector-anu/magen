@@ -331,12 +331,7 @@ function PolicyCard({
               <span className={styles.badgeBlue}>{data.frequency}</span>
             </td>
           </tr>
-          <tr>
-            <td className={styles.pKey}>approval</td>
-            <td className={styles.pVal}>
-              <span className={styles.badgeBlue}>{data.approval_mode}</span>
-            </td>
-          </tr>
+
           <tr>
             <td className={styles.pKey}>disclosure</td>
             <td className={styles.pVal}>

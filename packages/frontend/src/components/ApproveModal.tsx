@@ -141,12 +141,14 @@ export function ApproveModal({ policy, onClose }: Props) {
               <span className={styles.recapKey}>frequency</span>
               <span className={styles.badge}>{policy.frequency}</span>
             </div>
-            <div className={styles.recapRow}>
-              <span className={styles.recapKey}>runs until</span>
-              <span className={`${styles.recapVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
-                {deadline}
-              </span>
-            </div>
+            {deadline && (
+              <div className={styles.recapRow}>
+                <span className={styles.recapKey}>runs until</span>
+                <span className={`${styles.recapVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
+                  {deadline}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className={styles.authBlock}>
