@@ -92,7 +92,7 @@ Browser → magen-frontend (Vite/React, static)
 | `DISBURSEMENT_VAULT_ADDRESS` | `0x39B557adf435D360d054294a2Fe3322844308Eb3` |
 | `WRAPPED_USDC_ADDRESS` | `0x0b6aCacf10fb1Ec0Ac66b9eCe71DB09b11eA2742` |
 | `USDC_ADDRESS` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` |
-| `AGENT_PUBLIC_JWK` | `{"crv":"Ed25519","x":"VHuned7bsDAf61WFhQKJbC0DJ-iKv_etRYk00mxquR8","kty":"OKP","kid":"Jz9LNJiOxfXJzSYupb9haGEB6yYrZqvTgS5k-ZcaCZs"}` |
+| `AGENT_PUBLIC_JWK` | Ed25519 public JWK — copy from `.env.keys` or Render agent env |
 | `GROQ_API_KEY` | Groq API key |
 | `OPENAI_API_KEY` | OpenAI API key (fallback parser) |
 | `FRONTEND_URL` | `https://magen-frontend.onrender.com` |
