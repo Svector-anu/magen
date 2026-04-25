@@ -23,6 +23,7 @@ export function ApproveModal({ policy, onClose }: Props) {
   const [execTxHash, setExecTxHash] = useState<string | null>(null);
   const [execError, setExecError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [awaitingSignature, setAwaitingSignature] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -32,26 +33,27 @@ export function ApproveModal({ policy, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Step 1: save policy + queue first job once operator is confirmed.
-  // Requires a fresh wallet signature to prove ownership — a MetaMask sign prompt
-  // appears after the setOperator tx confirms.
+  // Step 2: once setOperator confirms, ask for a free signature to save the policy
   useEffect(() => {
     if (!isSuccess || !VAULT_ADDRESS || !address || isExecuting || jobId || execTxHash || execError) return;
     setIsExecuting(true);
+    setAwaitingSignature(true);
     const minute = currentMinute();
     signMessageAsync({ message: walletMessage("save-policy", minute) })
       .then((sig) => {
+        setAwaitingSignature(false);
         if (!address || !VAULT_ADDRESS) throw new Error("Wallet or vault not available");
         return api.savePolicy({ policy, vaultAddress: VAULT_ADDRESS }, String(address), sig, minute);
       })
       .then((res) => setJobId(res.jobId))
       .catch((err: unknown) => {
+        setAwaitingSignature(false);
         setExecError(err instanceof Error ? err.message : String(err));
         setIsExecuting(false);
       });
   }, [isSuccess, policy, isExecuting, jobId, execTxHash, execError, address, signMessageAsync]);
 
-  // Step 2: poll job status until done or failed
+  // Step 3: poll until first job executes
   useEffect(() => {
     if (!jobId || execTxHash || execError) return;
     const interval = setInterval(async () => {
@@ -78,17 +80,16 @@ export function ApproveModal({ policy, onClose }: Props) {
   }
 
   const deadline = deadlineLabel(policy);
-  const vaultShort = VAULT_ADDRESS
-    ? `${VAULT_ADDRESS.slice(0, 10)}…${VAULT_ADDRESS.slice(-8)}`
-    : null;
+  const isAllDone = !!execTxHash;
+
+  // Step number for UI
+  const step = !isSuccess ? 1 : !jobId ? 2 : !execTxHash ? 3 : 3;
 
   return (
     <div className={styles.backdrop} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>
-            confirm payment
-          </div>
+          <div className={styles.modalTitle}>set up payment schedule</div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="close">✕</button>
         </div>
 
@@ -106,6 +107,27 @@ export function ApproveModal({ policy, onClose }: Props) {
             </div>
           )}
 
+          {/* Step indicator */}
+          <div className={styles.steps}>
+            <div className={`${styles.step} ${step >= 1 ? styles.stepActive : ""} ${isSuccess ? styles.stepDone : ""}`}>
+              <span className={styles.stepNum}>{isSuccess ? "✓" : "1"}</span>
+              <span className={styles.stepLabel}>Authorize on-chain</span>
+              <span className={styles.stepSub}>one-time · small gas fee</span>
+            </div>
+            <div className={styles.stepLine} />
+            <div className={`${styles.step} ${step >= 2 ? styles.stepActive : ""} ${jobId ? styles.stepDone : ""}`}>
+              <span className={styles.stepNum}>{jobId ? "✓" : "2"}</span>
+              <span className={styles.stepLabel}>Save schedule</span>
+              <span className={styles.stepSub}>free · no gas</span>
+            </div>
+            <div className={styles.stepLine} />
+            <div className={`${styles.step} ${step >= 3 ? styles.stepActive : ""} ${execTxHash ? styles.stepDone : ""}`}>
+              <span className={styles.stepNum}>{execTxHash ? "✓" : "3"}</span>
+              <span className={styles.stepLabel}>First payment</span>
+              <span className={styles.stepSub}>private · on-chain</span>
+            </div>
+          </div>
+
           <div className={styles.policyRecap}>
             <div className={styles.recapRow}>
               <span className={styles.recapKey}>recipient</span>
@@ -120,40 +142,47 @@ export function ApproveModal({ policy, onClose }: Props) {
               <span className={styles.badge}>{policy.frequency}</span>
             </div>
             <div className={styles.recapRow}>
-              <span className={styles.recapKey}>approval</span>
-              <span className={styles.badge}>{policy.approval_mode}</span>
+              <span className={styles.recapKey}>runs until</span>
+              <span className={`${styles.recapVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
+                {deadline}
+              </span>
             </div>
           </div>
 
           <div className={styles.authBlock}>
             <div className={styles.authExplain}>
-              run scheduled payments from your wallet. your balance stays private — only the scheduled amount moves.
+              {!isSuccess
+                ? "Step 1 grants Magen permission to send USDC from your wallet on schedule. Your balance stays private — only the scheduled amount moves each time. You can revoke this at any time."
+                : awaitingSignature
+                ? "Step 2 — sign to save your payment schedule. This is a free off-chain signature, no gas required."
+                : jobId && !execTxHash
+                ? "Schedule saved. Processing your first payment privately on-chain…"
+                : execTxHash
+                ? "All done. Your payment schedule is live."
+                : "Authorizing…"}
             </div>
-            <div className={styles.authDetails}>
-              <div className={styles.authRow}>
-                <span className={styles.authKey}>runs until</span>
-                <span className={`${styles.authVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
-                  {deadline}
-                </span>
-              </div>
-              <div className={styles.authRow}>
-                <span className={styles.authKey}>privacy</span>
-                <span className={styles.authVal}>amount is hidden onchain by default</span>
-              </div>
-              {alreadyOperator && !checkingOperator && (
+            {!isSuccess && (
+              <div className={styles.authDetails}>
                 <div className={styles.authRow}>
-                  <span className={styles.authKey}>status</span>
-                  <span className={styles.green}>approval active — signing again extends it</span>
+                  <span className={styles.authKey}>privacy</span>
+                  <span className={styles.authVal}>amount hidden on-chain by default</span>
                 </div>
-              )}
-            </div>
+                {alreadyOperator && !checkingOperator && (
+                  <div className={styles.authRow}>
+                    <span className={styles.authKey}>status</span>
+                    <span className={styles.green}>already authorized — signing again extends it</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Step 1 tx confirmed */}
           {isSuccess && hash && (
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>✓</span>
               <div>
-                <div className={styles.successTitle}>wallet approved</div>
+                <div className={styles.successTitle}>authorized on Arbitrum</div>
                 <a
                   className={styles.txLink}
                   href={`https://sepolia.arbiscan.io/tx/${hash}`}
@@ -166,20 +195,34 @@ export function ApproveModal({ policy, onClose }: Props) {
             </div>
           )}
 
-          {isExecuting && (
-            <div className={styles.successBlock}>
-              <span className={styles.successIcon}>⏳</span>
+          {/* Step 2 awaiting signature */}
+          {awaitingSignature && (
+            <div className={styles.infoBlock}>
+              <span className={styles.infoIcon}>✍</span>
               <div>
-                <div className={styles.successTitle}>running…</div>
+                <div className={styles.infoTitle}>sign in your wallet</div>
+                <div className={styles.infoText}>Free signature — no gas. This saves your payment schedule.</div>
               </div>
             </div>
           )}
 
+          {/* Step 3 polling */}
+          {jobId && !execTxHash && !execError && (
+            <div className={styles.infoBlock}>
+              <span className={styles.infoIcon}>⏳</span>
+              <div>
+                <div className={styles.infoTitle}>sending first payment…</div>
+                <div className={styles.infoText}>Encrypting amount and submitting on-chain. This takes a few seconds.</div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 done */}
           {execTxHash && (
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>✓</span>
               <div>
-                <div className={styles.successTitle}>payment sent (private)</div>
+                <div className={styles.successTitle}>first payment sent (private)</div>
                 <a
                   className={styles.txLink}
                   href={`https://sepolia.arbiscan.io/tx/${execTxHash}`}
@@ -210,13 +253,17 @@ export function ApproveModal({ policy, onClose }: Props) {
         </div>
 
         <div className={styles.modalFooter}>
-          {isSuccess ? (
+          {isAllDone ? (
             <button className={styles.btnDone} onClick={onClose}>
               done ✓
             </button>
           ) : !isConnected ? (
             <button className={styles.btnPrimary} onClick={openConnectModal}>
               connect wallet to continue
+            </button>
+          ) : isSuccess ? (
+            <button className={styles.btnPrimary} disabled>
+              {awaitingSignature ? "sign in wallet (free)…" : jobId ? "sending payment…" : "saving schedule…"}
             </button>
           ) : (
             <>
@@ -229,10 +276,10 @@ export function ApproveModal({ policy, onClose }: Props) {
                 disabled={!CONTRACTS_READY || isPending || isConfirming || checkingOperator}
               >
                 {isPending
-                  ? "sign in wallet…"
+                  ? "confirm in wallet…"
                   : isConfirming
-                  ? "confirming…"
-                  : "approve & sign ▸"}
+                  ? "confirming on Arbitrum…"
+                  : "authorize & schedule ▸"}
               </button>
             </>
           )}
