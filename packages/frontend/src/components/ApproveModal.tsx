@@ -208,11 +208,43 @@ export function ApproveModal({ policy, onClose }: Props) {
 
           {/* Step 3 polling */}
           {jobId && !execTxHash && !execError && (
-            <div className={styles.infoBlock}>
-              <span className={styles.infoIcon}>⏳</span>
-              <div>
-                <div className={styles.infoTitle}>sending first payment…</div>
-                <div className={styles.infoText}>Encrypting amount and submitting on-chain. This takes a few seconds.</div>
+            <div className={styles.paymentFlow}>
+              <div className={styles.flowNode}>
+                <div className={styles.flowNodeBox}>
+                  <span className={styles.flowNodeAddr}>
+                    {address ? `${String(address).slice(0, 6)}…${String(address).slice(-4)}` : "you"}
+                  </span>
+                </div>
+                <span className={styles.flowNodeLabel}>sender</span>
+              </div>
+
+              <div className={styles.flowConnector}>
+                <div className={styles.flowLine} />
+                <span className={styles.flowDot} />
+                <span className={`${styles.flowDot} ${styles.flowDot2}`} />
+                <span className={`${styles.flowDot} ${styles.flowDot3}`} />
+              </div>
+
+              <div className={`${styles.flowNode} ${styles.flowNodeTee}`}>
+                <div className={`${styles.flowNodeBox} ${styles.flowNodeBoxTee}`}>
+                  <span className={styles.flowLock}>⬡</span>
+                  <span className={styles.flowTeeLabel}>TEE</span>
+                </div>
+                <span className={styles.flowNodeLabel}>encrypting</span>
+              </div>
+
+              <div className={styles.flowConnector}>
+                <div className={styles.flowLine} />
+                <span className={`${styles.flowDot} ${styles.flowDotDelay}`} />
+                <span className={`${styles.flowDot} ${styles.flowDot2} ${styles.flowDotDelay}`} />
+                <span className={`${styles.flowDot} ${styles.flowDot3} ${styles.flowDotDelay}`} />
+              </div>
+
+              <div className={styles.flowNode}>
+                <div className={styles.flowNodeBox}>
+                  <span className={styles.flowNodeAddr}>{policy.recipient_display_name}</span>
+                </div>
+                <span className={styles.flowNodeLabel}>recipient</span>
               </div>
             </div>
           )}

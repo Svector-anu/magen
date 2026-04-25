@@ -379,6 +379,125 @@
   line-height: 1.6;
 }
 
+/* payment flow diagram (step 3 polling) */
+.paymentFlow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px 16px;
+  border: 1px solid rgba(47, 129, 247, 0.12);
+  background: rgba(47, 129, 247, 0.03);
+  gap: 0;
+}
+
+.flowNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.flowNodeBox {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 88px;
+  justify-content: center;
+}
+
+.flowNodeAddr {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+  display: block;
+}
+
+.flowNodeLabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* TEE node */
+.flowNodeTee {}
+
+.flowNodeBoxTee {
+  border-color: rgba(47, 129, 247, 0.4);
+  background: rgba(47, 129, 247, 0.06);
+  animation: teePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes teePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(47, 129, 247, 0); border-color: rgba(47, 129, 247, 0.4); }
+  50%       { box-shadow: 0 0 14px 3px rgba(47, 129, 247, 0.18); border-color: rgba(47, 129, 247, 0.7); }
+}
+
+.flowLock {
+  font-size: 13px;
+  color: var(--blue);
+  line-height: 1;
+}
+
+.flowTeeLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--blue);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+/* connectors */
+.flowConnector {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  min-width: 20px;
+  max-width: 52px;
+  align-self: center;
+  margin-bottom: 18px;
+}
+
+.flowLine {
+  position: absolute;
+  inset: 0;
+  background: rgba(47, 129, 247, 0.12);
+}
+
+.flowDot {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--blue);
+  transform: translateY(-50%);
+  animation: dotTravel 1.5s linear infinite;
+  opacity: 0;
+}
+
+.flowDot2 { animation-delay: 0.5s; }
+.flowDot3 { animation-delay: 1s; }
+
+.flowDotDelay      { animation-delay: 0.25s; }
+.flowDot2.flowDotDelay { animation-delay: 0.75s; }
+.flowDot3.flowDotDelay { animation-delay: 1.25s; }
+
+@keyframes dotTravel {
+  0%   { left: -4px; opacity: 0; }
+  8%   { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { left: calc(100% + 4px); opacity: 0; }
+}
+
 /* ── footer ── */
 .modalFooter {
   display: flex;
