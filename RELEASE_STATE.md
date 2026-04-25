@@ -77,6 +77,7 @@ Browser → magen-frontend (Vite/React, static)
 | `punycode` deprecation warning | Low | From ethers.js dependency, not our code |
 | `contactStore` + `parseInstruction` test suites failing | Low | Pre-existing: `import.meta.dirname` at module-eval-time breaks in CJS Jest |
 | `WALLETCONNECT_PROJECT_ID` | Low | Falls back to `"magen-dev"` — get real ID from cloud.reown.com |
+| X/Twitter handle resolution | Known | `by_x_username` is behind Neynar paid tier ($9/mo). Free tier resolves Farcaster usernames, ENS, and raw addresses only. X-only users cannot be resolved until upgraded. User-facing message: "Try their Farcaster username, ENS name, or paste their wallet address directly." |
 
 ---
 

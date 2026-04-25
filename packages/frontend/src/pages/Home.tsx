@@ -116,7 +116,11 @@ export function Home() {
       setStage("resolved");
     } catch (err: unknown) {
       const data = (err as { data?: ParseErrorResponse }).data;
-      setErrors(data?.validationErrors ?? ["Unexpected error"]);
+      if (data?.error === "recipient_unresolved") {
+        setErrors(["Recipient not found. Try their Farcaster username, ENS name (e.g. name.eth), or paste their wallet address directly."]);
+      } else {
+        setErrors(data?.validationErrors ?? ["Unexpected error"]);
+      }
       setStage("error");
     }
   }
