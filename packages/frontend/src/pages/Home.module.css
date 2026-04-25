@@ -41,13 +41,27 @@
   height: 900px;
   background: radial-gradient(
     ellipse at 50% 0%,
-    rgba(47, 129, 247, 0.22) 0%,
-    rgba(47, 129, 247, 0.08) 35%,
-    rgba(63, 185, 80, 0.04) 55%,
+    rgba(47, 129, 247, 0.32) 0%,
+    rgba(47, 129, 247, 0.14) 35%,
+    rgba(63, 185, 80, 0.05) 55%,
     transparent 70%
   );
   pointer-events: none;
   z-index: 0;
+}
+
+@media (max-width: 640px) {
+  .page::before {
+    width: 800px;
+    height: 600px;
+    top: -100px;
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      rgba(47, 129, 247, 0.4) 0%,
+      rgba(47, 129, 247, 0.18) 40%,
+      transparent 70%
+    );
+  }
 }
 
 .page::after {
@@ -473,6 +487,9 @@
   cursor: not-allowed;
   font-size: 10px;
   letter-spacing: 0.05em;
+  white-space: normal;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .policyId {
