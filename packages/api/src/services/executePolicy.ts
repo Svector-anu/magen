@@ -118,8 +118,8 @@ export async function executePolicy(params: {
 
   const tx = await agent.execute(
     checksummedVault,
-    checksummedRecipient,
     checksummedPayer,
+    checksummedRecipient,
     handle,
     handleProof,
     policyIdBytes32,

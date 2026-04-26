@@ -117,6 +117,14 @@ export function pausePolicy(id: string): void {
     .run(id);
 }
 
+export function resumePolicy(id: string, ownerWallet: string): boolean {
+  const now = new Date().toISOString();
+  const result = getDb()
+    .prepare(`UPDATE policies SET status = 'active', next_execution_at = ? WHERE id = ? AND owner_wallet = ? AND status = 'paused'`)
+    .run(now, id, ownerWallet);
+  return result.changes > 0;
+}
+
 export interface DashboardData {
   stats: {
     active_policies: number;

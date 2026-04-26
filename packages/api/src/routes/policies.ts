@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { DisbursementPolicySchema } from "@magen/shared";
-import { createPolicy, listActivePolicies, cancelPolicy } from "../services/policyStore.js";
+import { createPolicy, listActivePolicies, cancelPolicy, resumePolicy } from "../services/policyStore.js";
 import { createJob } from "../services/jobStore.js";
 import { makeRequireWallet } from "../middleware/requireWallet.js";
 
@@ -36,4 +36,14 @@ policiesRouter.delete("/policies/:id", makeRequireWallet("cancel-policy"), (req:
     return;
   }
   res.status(204).end();
+});
+
+policiesRouter.post("/policies/:id/resume", makeRequireWallet("resume-policy"), (req: Request, res: Response) => {
+  const resumed = resumePolicy(req.params.id, req.verifiedWallet!);
+  if (!resumed) {
+    res.status(404).json({ error: "Policy not found or not paused" });
+    return;
+  }
+  const job = createJob(req.params.id);
+  res.status(200).json({ jobId: job.id });
 });

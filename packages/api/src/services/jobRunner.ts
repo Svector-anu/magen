@@ -4,6 +4,7 @@ import { getDb } from "./db.js";
 import { advancePolicy, pausePolicy } from "./policyStore.js";
 import { notify } from "./notify.js";
 import { isPaused } from "./pause.js";
+import { sendNotification } from "./web3mail.js";
 import type { StoredPolicy } from "./policyStore.js";
 
 const MAX_ATTEMPTS = 3;
@@ -53,6 +54,16 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
     advancePolicy(policy.id, new Date());
     notify({ type: "execution.success", jobId, policyId: policy.id, txHash: result.txHash });
     console.log(`[jobRunner] job ${jobId} done — txHash: ${result.txHash}`);
+    sendNotification(
+      policy.owner_wallet,
+      "Payment sent — Magen",
+      `<p>Your payment of <strong>${policy.amount_usdc} USDC</strong> to ${policy.recipient_display_name} was executed.</p><p>Transaction: <code>${result.txHash}</code></p>`
+    );
+    sendNotification(
+      policy.recipient_wallet,
+      "Payment received — Magen",
+      `<p>You received <strong>${policy.amount_usdc} USDC</strong> via Magen.</p><p>Transaction: <code>${result.txHash}</code></p>`
+    );
     return { ok: true, txHash: result.txHash };
   } catch (err) {
     const detail = String(err);
@@ -73,6 +84,11 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
     pausePolicy(policy.id);
     const reason = permanent ? "permanent error" : `exhausted ${MAX_ATTEMPTS} attempts`;
     console.error(`[jobRunner] job ${jobId} ${reason} — policy ${policy.id} paused:`, detail);
+    sendNotification(
+      policy.owner_wallet,
+      "Payment failed — Magen",
+      `<p>Your payment of <strong>${policy.amount_usdc} USDC</strong> to ${policy.recipient_display_name} could not be executed and has been paused.</p><p>Reason: ${detail.slice(0, 200)}</p><p>Check your <a href="${process.env.FRONTEND_URL ?? "http://localhost:5173"}/dashboard">Magen dashboard</a> for details.</p>`
+    );
     return { ok: false, error: "Execution failed" };
   }
 }
