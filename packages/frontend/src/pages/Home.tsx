@@ -14,6 +14,15 @@ const PLACEHOLDERS = [
   "send 50 USDC to bob every friday",
 ];
 
+const SUBLINES = [
+  "Payments that run themselves.",
+  "Set it once. Walk away.",
+  "Never miss a payment again.",
+  "Give your agent a wallet.",
+  "Let your AI handle the bills.",
+  "It just pays. Quietly.",
+];
+
 interface PolicyCardData {
   recipient_display_name: string;
   recipient_wallet: string;
@@ -62,6 +71,9 @@ export function Home() {
   const [enrichment, setEnrichment] = useState<{ onChainContext?: string }>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [subIdx, setSubIdx] = useState(0);
+  const [subText, setSubText] = useState("");
+  const [subErasing, setSubErasing] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,15 +85,14 @@ export function Home() {
   const signRef = useRef(signMessageAsync);
   useEffect(() => { signRef.current = signMessageAsync; });
 
-  const refreshPolicies = useCallback(async () => {
+  const refreshPolicies = useCallback(async (foreground = false) => {
     if (!address) return;
     try {
-      const { sig, minute } = await getOrSign(
-        address,
-        "list-policies",
-        (msg) => signRef.current({ message: msg }),
-      );
-      const policies = await api.listPolicies(address, sig, minute);
+      const auth = foreground
+        ? await getOrSign(address, "list-policies", (msg) => signRef.current({ message: msg }))
+        : getCached(address, "list-policies");
+      if (!auth) return;
+      const policies = await api.listPolicies(address, auth.sig, auth.minute);
       setActivePolicies(policies);
     } catch {
       // user rejected sign or request failed — leave list as-is
@@ -104,6 +115,27 @@ export function Home() {
     );
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    const phrase = SUBLINES[subIdx];
+    if (!subErasing) {
+      if (subText.length < phrase.length) {
+        const t = setTimeout(() => setSubText(phrase.slice(0, subText.length + 1)), 48);
+        return () => clearTimeout(t);
+      }
+      const t = setTimeout(() => setSubErasing(true), 2600);
+      return () => clearTimeout(t);
+    }
+    if (subText.length > 0) {
+      const t = setTimeout(() => setSubText((s) => s.slice(0, -1)), 24);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => {
+      setSubIdx((i) => (i + 1) % SUBLINES.length);
+      setSubErasing(false);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [subText, subErasing, subIdx]);
 
   async function handleParse() {
     if (!instruction.trim()) return;
@@ -142,7 +174,7 @@ export function Home() {
     } catch {
       // user rejected sign or delete failed — do nothing
     }
-    void refreshPolicies();
+    void refreshPolicies(true);
   }
 
   const canParse = instruction.trim().length > 0 && stage !== "parsing";
@@ -154,11 +186,11 @@ export function Home() {
       <div className={styles.container}>
         <section className={styles.hero}>
           <h1 className={styles.headline}>
-            Automate payments.<br />
-            <span className={styles.headlineDim}>Keep them private.</span>
+            automate payments.<br />
+            <span className={styles.headlineDim}>keep them private.</span>
           </h1>
           <p className={styles.subheadline}>
-            automate your payments — without exposing every detail.
+            {subText}<span className={styles.subCursor} />
           </p>
         </section>
 
