@@ -25,6 +25,17 @@ export function ApproveModal({ policy, onClose }: Props) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [awaitingSignature, setAwaitingSignature] = useState(false);
 
+  // ask-every-time: no setOperator needed, skip straight to save
+  const [readyToSave, setReadyToSave] = useState(false);
+  // continue-until-revoked: require double-confirm before setOperator
+  const [revokeWarning, setRevokeWarning] = useState(false);
+
+  const isAskEveryTime = policy.approval_mode === "ask-every-time";
+  const isContinueUntilRevoked = policy.approval_mode === "continue-until-revoked";
+
+  // The save step triggers when: setOperator confirmed (period/revoked) OR skip (ask-every-time)
+  const saveTrigger = isAskEveryTime ? readyToSave : isSuccess;
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -33,9 +44,9 @@ export function ApproveModal({ policy, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Step 2: once setOperator confirms, ask for a free signature to save the policy
+  // Save policy once the appropriate step 1 is done
   useEffect(() => {
-    if (!isSuccess || !VAULT_ADDRESS || !address || isExecuting || jobId || execTxHash || execError) return;
+    if (!saveTrigger || !VAULT_ADDRESS || !address || isExecuting || jobId || execTxHash || execError) return;
     setIsExecuting(true);
     setAwaitingSignature(true);
     const minute = currentMinute();
@@ -51,11 +62,11 @@ export function ApproveModal({ policy, onClose }: Props) {
         setExecError(err instanceof Error ? err.message : String(err));
         setIsExecuting(false);
       });
-  }, [isSuccess, policy, isExecuting, jobId, execTxHash, execError, address, signMessageAsync]);
+  }, [saveTrigger, policy, isExecuting, jobId, execTxHash, execError, address, signMessageAsync]);
 
-  // Step 3: poll until first job executes
+  // Poll until first job executes (not applicable for ask-every-time but harmless)
   useEffect(() => {
-    if (!jobId || execTxHash || execError) return;
+    if (!jobId || execTxHash || execError || isAskEveryTime) return;
     const interval = setInterval(async () => {
       try {
         const job = await api.getJobStatus(jobId);
@@ -73,17 +84,27 @@ export function ApproveModal({ policy, onClose }: Props) {
       }
     }, 3_000);
     return () => clearInterval(interval);
-  }, [jobId, execTxHash, execError]);
+  }, [jobId, execTxHash, execError, isAskEveryTime]);
 
   function handleApprove() {
+    if (isAskEveryTime) {
+      setReadyToSave(true);
+      return;
+    }
+    if (isContinueUntilRevoked && !revokeWarning) {
+      setRevokeWarning(true);
+      return;
+    }
     setOperator(computeDeadline(policy));
   }
 
   const deadline = deadlineLabel(policy);
-  const isAllDone = !!execTxHash;
+  const isAllDone = isAskEveryTime ? !!jobId : !!execTxHash;
 
-  // Step number for UI
-  const step = !isSuccess ? 1 : !jobId ? 2 : !execTxHash ? 3 : 3;
+  // Step numbers adapt to mode
+  const step = isAskEveryTime
+    ? !readyToSave ? 1 : !jobId ? 2 : 2
+    : !isSuccess ? 1 : !jobId ? 2 : !execTxHash ? 3 : 3;
 
   return (
     <div className={styles.backdrop} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -108,25 +129,41 @@ export function ApproveModal({ policy, onClose }: Props) {
           )}
 
           {/* Step indicator */}
-          <div className={styles.steps}>
-            <div className={`${styles.step} ${step >= 1 ? styles.stepActive : ""} ${isSuccess ? styles.stepDone : ""}`}>
-              <span className={styles.stepNum}>{isSuccess ? "✓" : "1"}</span>
-              <span className={styles.stepLabel}>Authorize on-chain</span>
-              <span className={styles.stepSub}>one-time · small gas fee</span>
+          {isAskEveryTime ? (
+            <div className={styles.steps}>
+              <div className={`${styles.step} ${step >= 1 ? styles.stepActive : ""} ${jobId ? styles.stepDone : ""}`}>
+                <span className={styles.stepNum}>{jobId ? "✓" : "1"}</span>
+                <span className={styles.stepLabel}>Save schedule</span>
+                <span className={styles.stepSub}>free · no gas</span>
+              </div>
+              <div className={styles.stepLine} />
+              <div className={`${styles.step} ${jobId ? styles.stepActive : ""}`}>
+                <span className={styles.stepNum}>2</span>
+                <span className={styles.stepLabel}>Approve each cycle</span>
+                <span className={styles.stepSub}>you sign each payment</span>
+              </div>
             </div>
-            <div className={styles.stepLine} />
-            <div className={`${styles.step} ${step >= 2 ? styles.stepActive : ""} ${jobId ? styles.stepDone : ""}`}>
-              <span className={styles.stepNum}>{jobId ? "✓" : "2"}</span>
-              <span className={styles.stepLabel}>Save schedule</span>
-              <span className={styles.stepSub}>free · no gas</span>
+          ) : (
+            <div className={styles.steps}>
+              <div className={`${styles.step} ${step >= 1 ? styles.stepActive : ""} ${isSuccess ? styles.stepDone : ""}`}>
+                <span className={styles.stepNum}>{isSuccess ? "✓" : "1"}</span>
+                <span className={styles.stepLabel}>Authorize on-chain</span>
+                <span className={styles.stepSub}>one-time · small gas fee</span>
+              </div>
+              <div className={styles.stepLine} />
+              <div className={`${styles.step} ${step >= 2 ? styles.stepActive : ""} ${jobId ? styles.stepDone : ""}`}>
+                <span className={styles.stepNum}>{jobId ? "✓" : "2"}</span>
+                <span className={styles.stepLabel}>Save schedule</span>
+                <span className={styles.stepSub}>free · no gas</span>
+              </div>
+              <div className={styles.stepLine} />
+              <div className={`${styles.step} ${step >= 3 ? styles.stepActive : ""} ${execTxHash ? styles.stepDone : ""}`}>
+                <span className={styles.stepNum}>{execTxHash ? "✓" : "3"}</span>
+                <span className={styles.stepLabel}>First payment</span>
+                <span className={styles.stepSub}>private · on-chain</span>
+              </div>
             </div>
-            <div className={styles.stepLine} />
-            <div className={`${styles.step} ${step >= 3 ? styles.stepActive : ""} ${execTxHash ? styles.stepDone : ""}`}>
-              <span className={styles.stepNum}>{execTxHash ? "✓" : "3"}</span>
-              <span className={styles.stepLabel}>First payment</span>
-              <span className={styles.stepSub}>private · on-chain</span>
-            </div>
-          </div>
+          )}
 
           <div className={styles.policyRecap}>
             <div className={styles.recapRow}>
@@ -141,29 +178,62 @@ export function ApproveModal({ policy, onClose }: Props) {
               <span className={styles.recapKey}>frequency</span>
               <span className={styles.badge}>{policy.frequency}</span>
             </div>
-            {deadline && (
+            <div className={styles.recapRow}>
+              <span className={styles.recapKey}>approval</span>
+              <span className={styles.recapVal}>
+                {isAskEveryTime
+                  ? "you approve each payment"
+                  : isContinueUntilRevoked
+                  ? "runs until you revoke"
+                  : "approved for period"}
+              </span>
+            </div>
+            {deadline && !isAskEveryTime && (
               <div className={styles.recapRow}>
                 <span className={styles.recapKey}>runs until</span>
-                <span className={`${styles.recapVal} ${policy.approval_mode === "continue-until-revoked" ? styles.amber : ""}`}>
+                <span className={`${styles.recapVal} ${isContinueUntilRevoked ? styles.amber : ""}`}>
                   {deadline}
                 </span>
               </div>
             )}
           </div>
 
+          {/* continue-until-revoked: warning before step 1 */}
+          {isContinueUntilRevoked && revokeWarning && !isSuccess && (
+            <div className={styles.notice}>
+              <span className={styles.noticeIcon}>⚠</span>
+              <div>
+                <div className={styles.noticeTitle}>indefinite authorization</div>
+                <div className={styles.noticeText}>
+                  Magen will execute payments automatically with no expiry.
+                  You must actively revoke this from your dashboard to stop it.
+                  This cannot be undone automatically.
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className={styles.authBlock}>
             <div className={styles.authExplain}>
-              {!isSuccess
-                ? "Step 1 grants Magen permission to send USDC from your wallet on schedule. Your balance stays private — only the scheduled amount moves each time. You can revoke this at any time."
+              {isAskEveryTime && !readyToSave
+                ? "No on-chain authorization needed. You'll receive a notification each cycle and sign to approve that payment manually."
+                : isAskEveryTime && readyToSave && awaitingSignature
+                ? "Sign to save your schedule. Free off-chain signature — no gas."
+                : isAskEveryTime && jobId
+                ? "Schedule saved. You'll be notified when the first payment is ready for your approval."
+                : !isSuccess
+                ? isContinueUntilRevoked && revokeWarning
+                  ? "Confirm below to grant indefinite authorization. You can revoke from your dashboard at any time."
+                  : "Step 1 grants Magen permission to send USDC from your wallet on schedule. Your balance stays private — only the scheduled amount moves each time. You can revoke this at any time."
                 : awaitingSignature
-                ? "Step 2 — sign to save your payment schedule. This is a free off-chain signature, no gas required."
+                ? "Step 2 — sign to save your payment schedule. Free off-chain signature, no gas."
                 : jobId && !execTxHash
                 ? "Schedule saved. Processing your first payment privately on-chain…"
                 : execTxHash
                 ? "All done. Your payment schedule is live."
                 : "Authorizing…"}
             </div>
-            {!isSuccess && (
+            {!isSuccess && !isAskEveryTime && (
               <div className={styles.authDetails}>
                 <div className={styles.authRow}>
                   <span className={styles.authKey}>privacy</span>
@@ -179,7 +249,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             )}
           </div>
 
-          {/* Step 1 tx confirmed */}
+          {/* Step 1 tx confirmed (period / revoked modes) */}
           {isSuccess && hash && (
             <div className={styles.successBlock}>
               <span className={styles.successIcon}>✓</span>
@@ -197,7 +267,7 @@ export function ApproveModal({ policy, onClose }: Props) {
             </div>
           )}
 
-          {/* Step 2 awaiting signature */}
+          {/* Awaiting free signature */}
           {awaitingSignature && (
             <div className={styles.infoBlock}>
               <span className={styles.infoIcon}>✍</span>
@@ -208,8 +278,21 @@ export function ApproveModal({ policy, onClose }: Props) {
             </div>
           )}
 
-          {/* Step 3 polling */}
-          {jobId && !execTxHash && !execError && (
+          {/* ask-every-time: schedule saved */}
+          {isAskEveryTime && jobId && (
+            <div className={styles.successBlock}>
+              <span className={styles.successIcon}>✓</span>
+              <div>
+                <div className={styles.successTitle}>schedule saved</div>
+                <div className={styles.infoText} style={{ marginTop: 4 }}>
+                  You'll get a notification to approve each payment cycle.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 polling (period / revoked modes) */}
+          {!isAskEveryTime && jobId && !execTxHash && !execError && (
             <div className={styles.paymentFlow}>
               <div className={styles.flowNode}>
                 <div className={styles.flowNodeBox}>
@@ -295,9 +378,9 @@ export function ApproveModal({ policy, onClose }: Props) {
             <button className={styles.btnPrimary} onClick={openConnectModal}>
               connect wallet to continue
             </button>
-          ) : isSuccess ? (
+          ) : isSuccess || (isAskEveryTime && readyToSave) ? (
             <button className={styles.btnPrimary} disabled>
-              {awaitingSignature ? "sign in wallet (free)…" : jobId ? "sending payment…" : "saving schedule…"}
+              {awaitingSignature ? "sign in wallet (free)…" : jobId ? (isAskEveryTime ? "schedule saved" : "sending payment…") : "saving schedule…"}
             </button>
           ) : (
             <>
@@ -313,6 +396,8 @@ export function ApproveModal({ policy, onClose }: Props) {
                   ? "confirm in wallet…"
                   : isConfirming
                   ? "confirming on Arbitrum…"
+                  : isContinueUntilRevoked && revokeWarning
+                  ? "yes, authorize indefinitely ▸"
                   : "authorize & schedule ▸"}
               </button>
             </>
