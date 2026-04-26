@@ -9,10 +9,11 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.0.0",
-    "@magen/shared": "workspace:*",
     "@iexec-nox/handle": "0.1.0-beta.10",
+    "@iexec/dataprotector": "2.0.0-beta.26",
+    "@magen/shared": "workspace:*",
     "@rainbow-me/rainbowkit": "^2.0.0",
+    "@tanstack/react-query": "^5.0.0",
     "ethers": "^6.16.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
