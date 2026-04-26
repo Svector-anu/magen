@@ -167,6 +167,9 @@ export const api = {
   cancelPolicy: (id: string, address: string, sig: string, minute: number) =>
     delWithWallet(`/policies/${id}`, address, sig, minute),
 
+  resumePolicy: (id: string, address: string, sig: string, minute: number) =>
+    postWithWallet<{ jobId: string }>(`/policies/${id}/resume`, {}, address, sig, minute),
+
   getJobStatus: (jobId: string) =>
     get<{ id: string; status: string; txHash?: string; error?: string }>(`/jobs/${jobId}`),
 

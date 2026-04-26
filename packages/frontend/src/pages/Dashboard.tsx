@@ -3,6 +3,7 @@ import { useAccount, useSignMessage } from "wagmi";
 import { api } from "../lib/api.js";
 import { getCached, getOrSign } from "../lib/walletAuth.js";
 import type { DashboardData } from "../lib/api.js";
+import { WrapUsdcModal } from "../components/WrapUsdcModal.js";
 import styles from "./Dashboard.module.css";
 
 const ARBISCAN = "https://sepolia.arbiscan.io/tx/";
@@ -56,6 +57,8 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [wrapOpen, setWrapOpen] = useState(false);
+  const [resuming, setResuming] = useState<string | null>(null);
 
   // Stable ref so callbacks don't re-create when wagmi identity changes mid-connect
   const signRef = useRef(signMessageAsync);
@@ -91,9 +94,23 @@ export function Dashboard() {
     }
   }, [address]);
 
+  const handleResume = useCallback(async (policyId: string) => {
+    if (!address) return;
+    setResuming(policyId);
+    try {
+      const auth = await getOrSign(address, "resume-policy", (msg) => signRef.current({ message: msg }));
+      await api.resumePolicy(policyId, address, auth.sig, auth.minute);
+      await load(false);
+    } catch {
+      // sign rejected or resume failed — leave UI as-is
+    } finally {
+      setResuming(null);
+    }
+  }, [address, load]);
+
   useEffect(() => {
     if (!isConnected) return;
-    load(true);
+    load(false); // use cached auth only on mount — never auto-prompt
     const id = setInterval(() => load(false), POLL_MS);
     return () => clearInterval(id);
   }, [isConnected, load]);
@@ -103,6 +120,18 @@ export function Dashboard() {
       <div className={styles.empty}>
         <span className={styles.emptyIcon}>◈</span>
         <p>Connect your wallet to view your dashboard.</p>
+      </div>
+    );
+  }
+
+  if (!data && !loading) {
+    return (
+      <div className={styles.empty}>
+        <span className={styles.emptyIcon}>◈</span>
+        <p>Sign once to load your dashboard.</p>
+        <button className={styles.signBtn} onClick={() => load(true)}>
+          sign &amp; load
+        </button>
       </div>
     );
   }
@@ -118,14 +147,20 @@ export function Dashboard() {
             </span>
           )}
         </div>
-        <button
-          className={styles.refreshBtn}
-          onClick={() => load(true)}
-          disabled={loading}
-        >
-          {loading ? "↻ loading…" : "↻ refresh"}
-        </button>
+        <div className={styles.topBarActions}>
+          <button className={styles.wrapBtn} onClick={() => setWrapOpen(true)}>
+            + wrap usdc
+          </button>
+          <button
+            className={styles.refreshBtn}
+            onClick={() => load(true)}
+            disabled={loading}
+          >
+            {loading ? "↻ loading…" : "↻ refresh"}
+          </button>
+        </div>
       </div>
+      {wrapOpen && <WrapUsdcModal onClose={() => setWrapOpen(false)} />}
 
       {error && <div className={styles.errorBar}>{error}</div>}
 
@@ -229,9 +264,22 @@ export function Dashboard() {
                           )}
                         </td>
                         <td className={styles.errorCell}>
-                          {j.error
-                            ? <span className={styles.errorText} title={j.error}>something went wrong. retrying automatically.</span>
-                            : <span className={styles.muted}>—</span>}
+                          {j.status === "failed" ? (
+                            <span className={styles.failedNote}>
+                              <span title={j.error ?? undefined}>paused — check your wrapped USDC balance</span>
+                              <button
+                                className={styles.retryBtn}
+                                onClick={() => handleResume(j.policy_id)}
+                                disabled={resuming === j.policy_id}
+                              >
+                                {resuming === j.policy_id ? "resuming…" : "retry ↻"}
+                              </button>
+                            </span>
+                          ) : j.status === "pending" && j.error ? (
+                            <span className={styles.muted} title={j.error ?? undefined}>retrying…</span>
+                          ) : (
+                            <span className={styles.muted}>—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

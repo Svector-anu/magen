@@ -38,10 +38,51 @@ export const WRAPPED_USDC_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "wrap",
+    outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+export const USDC_ABI = [
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "spender", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "approve",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" },
+    ],
+    name: "allowance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
 const rawWrappedUsdc = import.meta.env.VITE_WRAPPED_USDC_ADDRESS as string | undefined;
 const rawVault = import.meta.env.VITE_VAULT_ADDRESS as string | undefined;
+const rawUsdc = import.meta.env.VITE_USDC_ADDRESS as string | undefined;
 
 export const WRAPPED_USDC_ADDRESS =
   rawWrappedUsdc && /^0x[0-9a-fA-F]{40}$/.test(rawWrappedUsdc)
@@ -51,6 +92,11 @@ export const WRAPPED_USDC_ADDRESS =
 export const VAULT_ADDRESS =
   rawVault && /^0x[0-9a-fA-F]{40}$/.test(rawVault)
     ? (rawVault as `0x${string}`)
+    : null;
+
+export const USDC_ADDRESS =
+  rawUsdc && /^0x[0-9a-fA-F]{40}$/.test(rawUsdc)
+    ? (rawUsdc as `0x${string}`)
     : null;
 
 export const CONTRACTS_READY = !!(WRAPPED_USDC_ADDRESS && VAULT_ADDRESS);
