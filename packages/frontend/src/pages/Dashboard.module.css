@@ -59,6 +59,24 @@
   border-color: rgba(124, 58, 237, 0.35);
 }
 
+.claimBtn {
+  font-size: 13px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.08);
+  border: 1px solid rgba(63, 185, 80, 0.2);
+  padding: 7px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: -0.01em;
+}
+.claimBtn:hover {
+  background: rgba(63, 185, 80, 0.14);
+  border-color: rgba(63, 185, 80, 0.35);
+}
+
 .refreshBtn {
   font-size: 13px;
   font-family: var(--font-sans);

@@ -4,6 +4,7 @@ import { api } from "../lib/api.js";
 import { getCached, getOrSign } from "../lib/walletAuth.js";
 import type { DashboardData } from "../lib/api.js";
 import { WrapUsdcModal } from "../components/WrapUsdcModal.js";
+import { UnwrapModal } from "../components/UnwrapModal.js";
 import styles from "./Dashboard.module.css";
 
 const ARBISCAN = "https://sepolia.arbiscan.io/tx/";
@@ -58,6 +59,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [wrapOpen, setWrapOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
   const [resuming, setResuming] = useState<string | null>(null);
 
   // Stable ref so callbacks don't re-create when wagmi identity changes mid-connect
@@ -151,6 +153,9 @@ export function Dashboard() {
           <button className={styles.wrapBtn} onClick={() => setWrapOpen(true)}>
             + wrap usdc
           </button>
+          <button className={styles.claimBtn} onClick={() => setClaimOpen(true)}>
+            claim cUSDC
+          </button>
           <button
             className={styles.refreshBtn}
             onClick={() => load(true)}
@@ -161,6 +166,7 @@ export function Dashboard() {
         </div>
       </div>
       {wrapOpen && <WrapUsdcModal onClose={() => setWrapOpen(false)} />}
+      {claimOpen && <UnwrapModal onClose={() => setClaimOpen(false)} />}
 
       {error && <div className={styles.errorBar}>{error}</div>}
 

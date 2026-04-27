@@ -48,6 +48,36 @@ export const WRAPPED_USDC_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [
+      { internalType: "address", name: "from", type: "address" },
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "euint256", name: "amount", type: "bytes32" },
+    ],
+    name: "unwrap",
+    outputs: [{ internalType: "euint256", name: "unwrapRequestId", type: "bytes32" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "euint256", name: "unwrapRequestId", type: "bytes32" },
+      { internalType: "bytes", name: "decryptedAmountAndProof", type: "bytes" },
+    ],
+    name: "finalizeUnwrap",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "receiver", type: "address" },
+      { indexed: false, internalType: "euint256", name: "amount", type: "bytes32" },
+    ],
+    name: "UnwrapRequested",
+    type: "event",
+  },
 ] as const;
 
 export const USDC_ABI = [
