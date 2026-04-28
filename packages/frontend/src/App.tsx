@@ -1,34 +1,49 @@
 import { useState } from "react";
-import { WagmiProvider } from "wagmi";
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { WagmiProvider } from "@privy-io/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import "@rainbow-me/rainbowkit/styles.css";
+import { arbitrumSepolia } from "wagmi/chains";
 import { wagmiConfig } from "./lib/wagmiConfig.js";
 import { WalletButton } from "./components/WalletButton.js";
 import { NotificationBanner } from "./components/NotificationBanner.js";
 import { EmailOptInModal } from "./components/EmailOptInModal.js";
+import { Footer } from "./components/Footer.js";
 import { Home } from "./pages/Home.js";
 import { Dashboard } from "./pages/Dashboard.js";
+import { Contacts } from "./pages/Contacts.js";
 import styles from "./App.module.css";
 
 const queryClient = new QueryClient();
 
-const rkTheme = darkTheme({
-  accentColor: "#2f81f7",
-  accentColorForeground: "white",
-  borderRadius: "none",
-  overlayBlur: "small",
-});
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID;
+if (!PRIVY_APP_ID) throw new Error("VITE_PRIVY_APP_ID is not set — add it to .env");
 
 export function App() {
   const [showOptIn, setShowOptIn] = useState(false);
   const [notifyOptedIn, setNotifyOptedIn] = useState(false);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      config={{
+        appearance: {
+          theme: "light",
+          accentColor: "#7c3aed",
+          logo: "/logo.svg",
+          landingHeader: "Sign in to Magen",
+          loginMessage: "Private scheduled payments on Arbitrum",
+          walletChainType: "ethereum-only",
+        },
+        loginMethods: ["email", "wallet", "google", "apple"],
+        embeddedWallets: {
+          ethereum: { createOnLogin: "users-without-wallets" },
+        },
+        defaultChain: arbitrumSepolia,
+      }}
+    >
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={rkTheme}>
+        <WagmiProvider config={wagmiConfig}>
           <BrowserRouter>
             <div className={styles.shell}>
               <header className={styles.header}>
@@ -40,35 +55,18 @@ export function App() {
                 </a>
 
                 <nav className={styles.navCapsule}>
-                  {/* Payments dropdown */}
-                  <div className={styles.navItem}>
-                    <span className={styles.navLink}>
-                      Payments <span className={styles.navCaret}>▾</span>
-                    </span>
-                    <div className={styles.dropdown}>
-                      <div className={styles.dropdownPanel}>
-                        <NavLink to="/" end className={styles.dropdownItem}>
-                          <span className={styles.dropdownIcon}>✦</span>
-                          <span className={styles.dropdownLabel}>
-                            <span className={styles.dropdownTitle}>New Payment</span>
-                            <span className={styles.dropdownDesc}>Schedule a private transfer</span>
-                          </span>
-                        </NavLink>
-                        <div className={styles.dropdownDivider} />
-                        <NavLink to="/dashboard" className={styles.dropdownItem}>
-                          <span className={styles.dropdownIcon}>◈</span>
-                          <span className={styles.dropdownLabel}>
-                            <span className={styles.dropdownTitle}>My Policies</span>
-                            <span className={styles.dropdownDesc}>View active schedules</span>
-                          </span>
-                        </NavLink>
-                      </div>
-                    </div>
-                  </div>
+                  <NavLink
+                    to="/"
+                    end
+                    className={({ isActive }) =>
+                      `${styles.navLink} ${isActive ? styles.navActive : ""}`
+                    }
+                  >
+                    New Payment
+                  </NavLink>
 
                   <div className={styles.navDivider} />
 
-                  {/* Dashboard direct link */}
                   <NavLink
                     to="/dashboard"
                     className={({ isActive }) =>
@@ -76,6 +74,17 @@ export function App() {
                     }
                   >
                     Dashboard
+                  </NavLink>
+
+                  <div className={styles.navDivider} />
+
+                  <NavLink
+                    to="/contacts"
+                    className={({ isActive }) =>
+                      `${styles.navLink} ${isActive ? styles.navActive : ""}`
+                    }
+                  >
+                    Contacts
                   </NavLink>
                 </nav>
 
@@ -88,8 +97,10 @@ export function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/contacts" element={<Contacts />} />
                 </Routes>
               </main>
+              <Footer />
               {showOptIn && (
                 <EmailOptInModal
                   onClose={() => setShowOptIn(false)}
@@ -101,8 +112,8 @@ export function App() {
               )}
             </div>
           </BrowserRouter>
-        </RainbowKitProvider>
+        </WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </PrivyProvider>
   );
 }

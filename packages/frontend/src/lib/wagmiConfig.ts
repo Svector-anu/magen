@@ -1,9 +1,10 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { createConfig } from "@privy-io/wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
+import { http } from "wagmi";
 
-export const wagmiConfig = getDefaultConfig({
-  appName: "Magen",
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "magen-dev",
+export const wagmiConfig = createConfig({
   chains: [arbitrumSepolia],
-  ssr: false,
+  transports: {
+    [arbitrumSepolia.id]: http(),
+  },
 });

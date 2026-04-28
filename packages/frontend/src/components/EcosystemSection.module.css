@@ -1,0 +1,130 @@
+.section {
+  position: relative;
+  min-height: 550vh;
+  width: 100%;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.icon {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+.icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 18px;
+  object-fit: contain;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── 7 unique drift paths — large amplitude so icons cross in/out of viewport ── */
+
+/* :global prevents CSS Modules from hashing these names — required for inline animation references */
+:global {
+  @keyframes magenDrift1 {
+    0%   { transform: translate(0px,    0px); }
+    30%  { transform: translate(18px,  -14px); }
+    65%  { transform: translate(-10px,   8px); }
+    100% { transform: translate(0px,    0px); }
+  }
+  @keyframes magenDrift2 {
+    0%   { transform: translate(0px,   0px); }
+    25%  { transform: translate(-16px, 12px); }
+    70%  { transform: translate(12px, -10px); }
+    100% { transform: translate(0px,   0px); }
+  }
+  @keyframes magenDrift3 {
+    0%   { transform: translate(0px,   0px); }
+    40%  { transform: translate(14px,  18px); }
+    75%  { transform: translate(-12px, -8px); }
+    100% { transform: translate(0px,   0px); }
+  }
+  @keyframes magenDrift4 {
+    0%   { transform: translate(0px,   0px); }
+    35%  { transform: translate(-20px, 10px); }
+    70%  { transform: translate(8px,  -16px); }
+    100% { transform: translate(0px,   0px); }
+  }
+  @keyframes magenDrift5 {
+    0%   { transform: translate(0px,   0px); }
+    20%  { transform: translate(16px,  20px); }
+    60%  { transform: translate(-8px, -12px); }
+    100% { transform: translate(0px,   0px); }
+  }
+  @keyframes magenDrift6 {
+    0%   { transform: translate(0px,    0px); }
+    45%  { transform: translate(-18px, -16px); }
+    80%  { transform: translate(10px,    8px); }
+    100% { transform: translate(0px,    0px); }
+  }
+  @keyframes magenDrift7 {
+    0%   { transform: translate(0px,   0px); }
+    30%  { transform: translate(20px, -10px); }
+    65%  { transform: translate(-14px, 14px); }
+    100% { transform: translate(0px,   0px); }
+  }
+}
+
+/* ── center scroll-reveal text ── */
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 48px;
+  pointer-events: none;
+}
+
+.line {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+  text-align: center;
+  margin: 0;
+}
+
+.line:nth-child(1) { font-size: clamp(13px, 1.4vw, 18px); font-weight: 500; color: var(--text-muted); }
+.line:nth-child(2) { font-size: clamp(17px, 2.1vw, 27px); }
+.line:nth-child(3) { font-size: clamp(21px, 2.8vw, 36px); }
+.line:nth-child(4) { font-size: clamp(25px, 3.4vw, 44px); }
+.line:nth-child(5) { font-size: clamp(29px, 4.2vw, 54px); }
+
+.lineVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lineKiller.lineVisible {
+  color: transparent;
+  background: linear-gradient(110deg, #7c3aed 0%, #2f81f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── mobile ── */
+@media (max-width: 768px) {
+  .section { min-height: 420vh; }
+  .center { padding: 0 24px; gap: 4px; }
+  .icon:nth-child(n + 5) { display: none; }
+}
