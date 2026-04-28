@@ -88,6 +88,24 @@
   gap: 8px;
 }
 
+/* hamburger — desktop hidden, mobile visible */
+.hamburger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 16px;
+  padding: 6px 10px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.hamburger:hover {
+  color: var(--text);
+  background: var(--bg-elevated);
+}
+
 .main {
   flex: 1;
   padding-top: 64px;
@@ -96,63 +114,46 @@
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .header {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 64px auto;
-    height: auto;
-    padding: 0 16px 10px;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 64px;
+    height: 64px;
+    padding: 0 16px;
   }
 
-  /* logo stays top-left */
-  .logo {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-  }
+  /* hide desktop nav — replaced by hamburger menu */
+  .navCapsule { display: none; }
 
-  /* wallet button top-right */
-  .navRight {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: center;
-  }
+  /* show hamburger */
+  .hamburger { display: flex; align-items: center; }
 
-  /* nav drops to second row, full width, centered */
-  .navCapsule {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 100px;
-    padding: 4px;
-    gap: 2px;
-  }
+  /* hide theme toggle from header on mobile — it's in the hamburger menu */
+  .themeToggleDesktop { display: none; }
 
-  .navLink {
-    font-size: 12px;
-    padding: 6px 14px;
-  }
-
-  /* shrink logo SVG */
   .logo svg {
     width: 84px;
     height: 30px;
   }
 
-  .main {
-    padding-top: 110px;
-  }
+  .main { padding-top: 64px; }
 }
 
 @media (max-width: 400px) {
-  .header { padding: 0 12px 10px; }
-  .navLink { padding: 6px 10px; font-size: 11px; }
+  .header { padding: 0 12px; }
   .logo svg { width: 72px; height: 26px; }
 }
 
 /* ── light mode overrides ── */
 :global([data-theme="light"]) .header {
   background: rgba(247, 248, 252, 0.88);
+}
+
+:global([data-theme="light"]) .hamburger {
+  border-color: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.45);
+}
+:global([data-theme="light"]) .hamburger:hover {
+  color: var(--text);
+  background: var(--bg-elevated);
 }
 
 :global([data-theme="light"]) .navCapsule {

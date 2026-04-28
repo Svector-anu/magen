@@ -7,6 +7,7 @@ import { arbitrumSepolia } from "wagmi/chains";
 import { wagmiConfig } from "./lib/wagmiConfig.js";
 import { WalletButton } from "./components/WalletButton.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
+import { MobileMenu } from "./components/MobileMenu.js";
 import { NotificationBanner } from "./components/NotificationBanner.js";
 import { EmailOptInModal } from "./components/EmailOptInModal.js";
 import { Footer } from "./components/Footer.js";
@@ -22,6 +23,7 @@ const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID as string;
 export function App() {
   const [showOptIn, setShowOptIn] = useState(false);
   const [notifyOptedIn, setNotifyOptedIn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <PrivyProvider
@@ -89,10 +91,22 @@ export function App() {
                 </nav>
 
                 <div className={styles.navRight}>
-                  <ThemeToggle />
+                  <span className={styles.themeToggleDesktop}>
+                    <ThemeToggle />
+                  </span>
                   <WalletButton />
+                  <button
+                    className={styles.hamburger}
+                    onClick={() => setMenuOpen(true)}
+                    aria-label="Open menu"
+                  >
+                    ☰
+                  </button>
                 </div>
               </header>
+
+              <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+
               <main className={styles.main}>
                 <NotificationBanner onEnable={() => setShowOptIn(true)} forceHide={notifyOptedIn} />
                 <Routes>
