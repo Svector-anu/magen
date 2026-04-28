@@ -16,8 +16,7 @@ import styles from "./App.module.css";
 
 const queryClient = new QueryClient();
 
-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID;
-if (!PRIVY_APP_ID) throw new Error("VITE_PRIVY_APP_ID is not set — add it to .env");
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID as string;
 
 export function App() {
   const [showOptIn, setShowOptIn] = useState(false);
