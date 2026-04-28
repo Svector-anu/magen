@@ -2,9 +2,9 @@ import type { DisbursementPolicy, Contact } from "@magen/shared";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-// Must stay in sync with SIG_WINDOW_MINUTES on the server (default 5).
-// Refresh 1 minute before server would reject it.
-export const WALLET_SIG_REFRESH_MINUTES = 4;
+// Must stay in sync with SIG_WINDOW_MINUTES on the server (default 60).
+// Refresh 5 minutes before server would reject it.
+export const WALLET_SIG_REFRESH_MINUTES = 55;
 
 export function currentMinute(): number {
   return Math.floor(Date.now() / 60_000);

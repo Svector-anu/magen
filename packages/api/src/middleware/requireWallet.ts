@@ -1,7 +1,7 @@
 import { verifyMessage, getAddress } from "ethers";
 import type { Request, Response, NextFunction } from "express";
 
-export const SIG_WINDOW_MINUTES = Number(process.env.SIG_WINDOW_MINUTES ?? 5);
+export const SIG_WINDOW_MINUTES = Number(process.env.SIG_WINDOW_MINUTES ?? 60);
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
