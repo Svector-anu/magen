@@ -146,6 +146,26 @@ export interface ResolveResult {
   contact?: Contact;
 }
 
+export interface AppNotification {
+  id: string;
+  wallet: string;
+  type: "payment_sent" | "payment_received" | "payment_failed";
+  title: string;
+  body: string;
+  policy_id: string | null;
+  job_id: string | null;
+  tx_hash: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+async function putWithWallet(path: string, address: string, sig: string, minute: number): Promise<void> {
+  await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: walletHeaders(address, sig, minute),
+  });
+}
+
 export const api = {
   parseInstruction: (instruction: string) =>
     post<ParseResponse>("/parse-instruction", { instruction }),
@@ -192,4 +212,10 @@ export const api = {
 
   getDashboard: (address: string, sig: string, minute: number) =>
     getWithWallet<DashboardData>("/dashboard", address, sig, minute),
+
+  listNotifications: (address: string, sig: string, minute: number) =>
+    getWithWallet<{ notifications: AppNotification[]; unread: number }>("/notifications", address, sig, minute),
+
+  markNotificationsRead: (address: string, sig: string, minute: number) =>
+    putWithWallet("/notifications/read", address, sig, minute),
 };

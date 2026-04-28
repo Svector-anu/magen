@@ -10,6 +10,7 @@ import { jobsRouter } from "./routes/jobs.js";
 import { policiesRouter } from "./routes/policies.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { adminRouter } from "./routes/admin.js";
+import { notificationsRouter } from "./routes/notifications.js";
 import { listDuePolicies } from "./services/policyStore.js";
 import { createJob, listPendingJobs } from "./services/jobStore.js";
 import { isPaused } from "./services/pause.js";
@@ -34,6 +35,7 @@ app.use("/api", executeRouter);
 app.use("/api", jobsRouter);
 app.use("/api", policiesRouter);
 app.use("/api", dashboardRouter);
+app.use("/api", notificationsRouter);
 app.use("/api", adminRouter);
 
 const SCHEDULER_INTERVAL_MS = 30_000;

@@ -65,6 +65,22 @@ function migrate(db: DatabaseSync): void {
 
     CREATE INDEX IF NOT EXISTS idx_contacts_wallet ON contacts(wallet_address);
     CREATE INDEX IF NOT EXISTS idx_contacts_ens ON contacts(ens_name);
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         TEXT PRIMARY KEY,
+      wallet     TEXT NOT NULL,
+      type       TEXT NOT NULL,
+      title      TEXT NOT NULL,
+      body       TEXT NOT NULL,
+      policy_id  TEXT,
+      job_id     TEXT,
+      tx_hash    TEXT,
+      read_at    TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_wallet ON notifications(wallet);
+    CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(wallet, read_at);
   `);
 
   for (const col of [

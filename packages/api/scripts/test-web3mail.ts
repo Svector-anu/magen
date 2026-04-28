@@ -83,12 +83,14 @@ if (!protectedData) {
 
 try {
   console.log(`[3/3] Sending test email to protectedData: ${protectedData}…`);
+  console.log("      Note: useVoucher=true — the API wallet must have a voucher from https://builder.iex.ec/");
   await client.sendEmail({
     protectedData,
     emailSubject: "Magen Web3Mail test",
     emailContent: "<p>This is a test email from the Magen Web3Mail pipeline. If you received this, email notifications are working.</p>",
     contentType: "text/html",
     senderName: "Magen",
+    useVoucher: true,
   });
   console.log("      ✓ Email sent successfully");
 } catch (err) {

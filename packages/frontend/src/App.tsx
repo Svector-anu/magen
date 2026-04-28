@@ -9,6 +9,7 @@ import { WalletButton } from "./components/WalletButton.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
 import { MobileMenu } from "./components/MobileMenu.js";
 import { NotificationBanner } from "./components/NotificationBanner.js";
+import { NotificationBell } from "./components/NotificationBell.js";
 import { EmailOptInModal } from "./components/EmailOptInModal.js";
 import { Footer } from "./components/Footer.js";
 import { Home } from "./pages/Home.js";
@@ -22,7 +23,6 @@ const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID as string;
 
 export function App() {
   const [showOptIn, setShowOptIn] = useState(false);
-  const [notifyOptedIn, setNotifyOptedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -94,6 +94,7 @@ export function App() {
                   <span className={styles.themeToggleDesktop}>
                     <ThemeToggle />
                   </span>
+                  <NotificationBell />
                   <WalletButton />
                   <button
                     className={styles.hamburger}
@@ -108,7 +109,7 @@ export function App() {
               <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
               <main className={styles.main}>
-                <NotificationBanner onEnable={() => setShowOptIn(true)} forceHide={notifyOptedIn} />
+                <NotificationBanner onEnable={() => setShowOptIn(true)} forceHide={true} />
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -119,10 +120,7 @@ export function App() {
               {showOptIn && (
                 <EmailOptInModal
                   onClose={() => setShowOptIn(false)}
-                  onOptedIn={() => {
-                    setNotifyOptedIn(true);
-                    setShowOptIn(false);
-                  }}
+                  onOptedIn={() => setShowOptIn(false)}
                 />
               )}
             </div>

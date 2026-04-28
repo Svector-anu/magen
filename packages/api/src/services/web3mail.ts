@@ -39,6 +39,7 @@ export function sendNotification(
         emailContent: htmlContent,
         contentType: "text/html",
         senderName: "Magen",
+        useVoucher: true,
       });
       console.log(`[web3mail] notification sent to ${walletAddress.slice(0, 10)}…`);
     } catch (err) {

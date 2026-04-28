@@ -5,8 +5,8 @@ const LINES = [
   "Money that runs on your rules.",
   "Set it once → it pays, every time.",
   "Amounts hidden. Logic enforced.",
-  "Powered by Arbitrum. Secured by iExec.",
-  "This is how money moves next.",
+  "Powered by Arbitrum. secured by iExec.",
+  "This is how money moves now.",
 ];
 
 // USDC is the anchor — all others start stacked behind it

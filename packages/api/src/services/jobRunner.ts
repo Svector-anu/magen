@@ -5,6 +5,7 @@ import { advancePolicy, pausePolicy } from "./policyStore.js";
 import { notify } from "./notify.js";
 import { isPaused } from "./pause.js";
 import { sendNotification } from "./web3mail.js";
+import { createNotification } from "../store/notificationStore.js";
 import type { StoredPolicy } from "./policyStore.js";
 
 const MAX_ATTEMPTS = 3;
@@ -70,6 +71,24 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
     }
     notify({ type: "execution.success", jobId, policyId: policy.id, txHash: result.txHash });
     console.log(`[jobRunner] job ${jobId} done — txHash: ${result.txHash}`);
+    createNotification({
+      wallet: policy.owner_wallet,
+      type: "payment_sent",
+      title: "Payment sent",
+      body: `${policy.amount_usdc} USDC → ${policy.recipient_display_name}`,
+      policy_id: policy.id,
+      job_id: jobId,
+      tx_hash: result.txHash,
+    });
+    createNotification({
+      wallet: policy.recipient_wallet,
+      type: "payment_received",
+      title: "Payment received",
+      body: `${policy.amount_usdc} USDC from Magen agent`,
+      policy_id: policy.id,
+      job_id: jobId,
+      tx_hash: result.txHash,
+    });
     sendNotification(
       policy.owner_wallet,
       "Payment sent — Magen",
@@ -100,6 +119,14 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
     pausePolicy(policy.id);
     const reason = permanent ? "permanent error" : `exhausted ${MAX_ATTEMPTS} attempts`;
     console.error(`[jobRunner] job ${jobId} ${reason} — policy ${policy.id} paused:`, detail);
+    createNotification({
+      wallet: policy.owner_wallet,
+      type: "payment_failed",
+      title: "Payment failed",
+      body: `${policy.amount_usdc} USDC → ${policy.recipient_display_name} — paused. ${detail.slice(0, 120)}`,
+      policy_id: policy.id,
+      job_id: jobId,
+    });
     sendNotification(
       policy.owner_wallet,
       "Payment failed — Magen",
