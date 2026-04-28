@@ -6,6 +6,10 @@ services:
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
     startCommand: node --experimental-sqlite packages/api/dist/index.js
     healthCheckPath: /health
+    disk:
+      name: magen-db
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -31,6 +35,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: DB_PATH
+        value: /data/.magen.db
 
   - name: magen-agent
     type: web
