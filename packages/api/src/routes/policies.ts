@@ -58,10 +58,10 @@ policiesRouter.post("/policies/:id/resume", makeRequireWallet("resume-policy"), 
 
 policiesRouter.post("/policies/:id/trigger", makeRequireWallet("trigger-policy"), async (req: Request, res: Response) => {
   const policies = await sql<StoredPolicy[]>`
-    SELECT * FROM policies WHERE id = ${req.params.id} AND owner_wallet = ${req.verifiedWallet!} AND status = 'active'
+    SELECT * FROM policies WHERE id = ${req.params.id} AND owner_wallet = ${req.verifiedWallet!} AND status IN ('active', 'paused')
   `;
   if (!policies[0]) {
-    res.status(404).json({ error: "Active policy not found" });
+    res.status(404).json({ error: "Policy not found" });
     return;
   }
   const existing = (await sql<{ id: string }[]>`
@@ -70,6 +70,9 @@ policiesRouter.post("/policies/:id/trigger", makeRequireWallet("trigger-policy")
   if (existing) {
     res.status(409).json({ error: "A job is already pending or running for this policy" });
     return;
+  }
+  if (policies[0].status === "paused") {
+    await sql`UPDATE policies SET status = 'active', next_execution_at = ${new Date().toISOString()} WHERE id = ${req.params.id}`;
   }
   const job = await createJob(req.params.id);
   res.status(201).json({ jobId: job.id });
