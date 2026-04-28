@@ -124,17 +124,25 @@
 
 /* ── mobile ── */
 @media (max-width: 768px) {
-  .section { min-height: 420vh; }
-  .center { padding: 0 24px; gap: 4px; }
+  .section { min-height: 320vh; }
 
-  /* override inline-style sizes — keep only 4 icons, smaller */
-  .icon:nth-child(n + 5) { display: none; }
-  .icon { width: 56px !important; height: 56px !important; }
-  .icon img { width: 56px !important; height: 56px !important; }
+  /* hide all floating icons — they overlap text at mobile viewport widths */
+  .icon { display: none !important; }
+
+  .center {
+    padding: 0 28px;
+    gap: 6px;
+  }
+
+  /* scale text down slightly so lines don't wrap awkwardly */
+  .line:nth-child(1) { font-size: clamp(12px, 3.2vw, 16px); }
+  .line:nth-child(2) { font-size: clamp(16px, 4.5vw, 24px); }
+  .line:nth-child(3) { font-size: clamp(20px, 5.5vw, 30px); }
+  .line:nth-child(4) { font-size: clamp(22px, 6.5vw, 36px); }
+  .line:nth-child(5) { font-size: clamp(24px, 7.5vw, 42px); }
 }
 
 @media (max-width: 400px) {
-  .icon { width: 44px !important; height: 44px !important; }
-  .icon img { width: 44px !important; height: 44px !important; }
-  .center { padding: 0 16px; }
+  .section { min-height: 280vh; }
+  .center { padding: 0 20px; }
 }
