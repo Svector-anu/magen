@@ -132,3 +132,38 @@
 @media (max-width: 480px) {
   .stepDesc { display: none; }
 }
+
+/* ── light mode overrides ── */
+:global([data-theme="light"]) .card {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:global([data-theme="light"]) .title {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+:global([data-theme="light"]) .dismissBtn {
+  color: rgba(0, 0, 0, 0.3);
+}
+:global([data-theme="light"]) .dismissBtn:hover {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+:global([data-theme="light"]) .step {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+:global([data-theme="light"]) .stepPending .stepIcon {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.35);
+}
+
+:global([data-theme="light"]) .stepLabel {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+:global([data-theme="light"]) .stepDesc {
+  color: rgba(0, 0, 0, 0.4);
+}

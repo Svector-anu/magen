@@ -149,3 +149,26 @@
   .navLink { padding: 6px 10px; font-size: 11px; }
   .logo svg { width: 72px; height: 26px; }
 }
+
+/* ── light mode overrides ── */
+:global([data-theme="light"]) .header {
+  background: rgba(247, 248, 252, 0.88);
+}
+
+:global([data-theme="light"]) .navCapsule {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:global([data-theme="light"]) .navLink {
+  color: rgba(26, 21, 35, 0.5);
+}
+
+:global([data-theme="light"]) .navLink:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+:global([data-theme="light"]) .navDivider {
+  background: rgba(0, 0, 0, 0.1);
+}
