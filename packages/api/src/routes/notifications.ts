@@ -7,11 +7,11 @@ export const notificationsRouter = Router();
 notificationsRouter.get(
   "/notifications",
   makeRequireWallet("list-notifications"),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const wallet = req.verifiedWallet!;
     res.json({
-      notifications: listNotifications(wallet),
-      unread: countUnread(wallet),
+      notifications: await listNotifications(wallet),
+      unread: await countUnread(wallet),
     });
   }
 );
@@ -19,8 +19,8 @@ notificationsRouter.get(
 notificationsRouter.put(
   "/notifications/read",
   makeRequireWallet("list-notifications"),
-  (req: Request, res: Response) => {
-    markAllRead(req.verifiedWallet!);
+  async (req: Request, res: Response) => {
+    await markAllRead(req.verifiedWallet!);
     res.json({ ok: true });
   }
 );

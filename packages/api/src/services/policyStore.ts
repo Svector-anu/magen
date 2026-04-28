@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getDb } from "./db.js";
+import { sql } from "./db.js";
 import type { DisbursementPolicy } from "@magen/shared";
 
 export interface StoredPolicy {
@@ -34,8 +34,7 @@ function nextExecutionDate(frequency: string, from: Date): Date | null {
   return d;
 }
 
-export function createPolicy(policy: DisbursementPolicy, vaultAddress: string, ownerWallet: string): StoredPolicy {
-  const db = getDb();
+export async function createPolicy(policy: DisbursementPolicy, vaultAddress: string, ownerWallet: string): Promise<StoredPolicy> {
   const now = new Date();
   const startDate = new Date(policy.start_date);
   const firstExecution = startDate > now ? startDate : now;
@@ -59,47 +58,48 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string, o
     created_at: now.toISOString(),
   };
 
-  const params = Object.fromEntries(
-    Object.entries({ ...row, last_executed_at: null }).map(([k, v]) => [k, v === undefined ? null : v])
-  );
-  db.prepare(`
+  await sql`
     INSERT INTO policies (
       id, owner_wallet, recipient_wallet, recipient_display_name, amount_usdc, frequency,
       approval_mode, start_date, end_date, approval_period_end, memo, auditor_wallet,
       vault_address, status, last_executed_at, next_execution_at, created_at
     ) VALUES (
-      @id, @owner_wallet, @recipient_wallet, @recipient_display_name, @amount_usdc, @frequency,
-      @approval_mode, @start_date, @end_date, @approval_period_end, @memo, @auditor_wallet,
-      @vault_address, @status, @last_executed_at, @next_execution_at, @created_at
+      ${row.id}, ${row.owner_wallet}, ${row.recipient_wallet}, ${row.recipient_display_name},
+      ${row.amount_usdc}, ${row.frequency}, ${row.approval_mode}, ${row.start_date},
+      ${row.end_date ?? null}, ${row.approval_period_end ?? null}, ${row.memo ?? null},
+      ${row.auditor_wallet ?? null}, ${row.vault_address}, ${row.status},
+      ${null}, ${row.next_execution_at}, ${row.created_at}
     )
-  `).run(params as unknown as Record<string, string | number | null>);
+  `;
 
   return row;
 }
 
-export function listActivePolicies(ownerWallet: string): StoredPolicy[] {
-  return getDb()
-    .prepare(`SELECT * FROM policies WHERE status = 'active' AND owner_wallet = ? ORDER BY created_at DESC`)
-    .all(ownerWallet) as unknown as StoredPolicy[];
+export async function listActivePolicies(ownerWallet: string): Promise<StoredPolicy[]> {
+  return sql<StoredPolicy[]>`
+    SELECT * FROM policies WHERE status = 'active' AND owner_wallet = ${ownerWallet}
+    ORDER BY created_at DESC
+  `;
 }
 
-export function cancelPolicy(id: string, ownerWallet: string): boolean {
-  const result = getDb()
-    .prepare(`UPDATE policies SET status = 'cancelled' WHERE id = ? AND owner_wallet = ? AND status = 'active'`)
-    .run(id, ownerWallet);
-  return result.changes > 0;
+export async function cancelPolicy(id: string, ownerWallet: string): Promise<boolean> {
+  const result = await sql`
+    UPDATE policies SET status = 'cancelled'
+    WHERE id = ${id} AND owner_wallet = ${ownerWallet} AND status = 'active'
+  `;
+  return result.count > 0;
 }
 
 const EXEC_CAP_PER_HOUR = Number(process.env.EXEC_CAP_PER_HOUR ?? 3);
 
-export function listDuePolicies(): StoredPolicy[] {
+export async function listDuePolicies(): Promise<StoredPolicy[]> {
   const now = new Date().toISOString();
-  return getDb().prepare(`
+  return sql<StoredPolicy[]>`
     SELECT p.* FROM policies p
     WHERE p.status = 'active'
-      AND p.next_execution_at <= ?
-      AND (p.end_date IS NULL OR p.end_date > ?)
-      AND (p.approval_period_end IS NULL OR p.approval_period_end > ?)
+      AND p.next_execution_at <= ${now}
+      AND (p.end_date IS NULL OR p.end_date > ${now})
+      AND (p.approval_period_end IS NULL OR p.approval_period_end > ${now})
       AND NOT EXISTS (
         SELECT 1 FROM jobs j
         WHERE j.policy_id = p.id AND j.status IN ('pending', 'processing')
@@ -108,23 +108,22 @@ export function listDuePolicies(): StoredPolicy[] {
         SELECT COUNT(*) FROM jobs j
         WHERE j.policy_id = p.id
           AND j.status = 'done'
-          AND j.created_at > datetime('now', '-1 hour')
-      ) < ?
-  `).all(now, now, now, EXEC_CAP_PER_HOUR) as unknown as StoredPolicy[];
+          AND j.created_at::timestamptz > NOW() - INTERVAL '1 hour'
+      ) < ${EXEC_CAP_PER_HOUR}
+  `;
 }
 
-export function pausePolicy(id: string): void {
-  getDb()
-    .prepare(`UPDATE policies SET status = 'paused' WHERE id = ? AND status = 'active'`)
-    .run(id);
+export async function pausePolicy(id: string): Promise<void> {
+  await sql`UPDATE policies SET status = 'paused' WHERE id = ${id} AND status = 'active'`;
 }
 
-export function resumePolicy(id: string, ownerWallet: string): boolean {
+export async function resumePolicy(id: string, ownerWallet: string): Promise<boolean> {
   const now = new Date().toISOString();
-  const result = getDb()
-    .prepare(`UPDATE policies SET status = 'active', next_execution_at = ? WHERE id = ? AND owner_wallet = ? AND status = 'paused'`)
-    .run(now, id, ownerWallet);
-  return result.changes > 0;
+  const result = await sql`
+    UPDATE policies SET status = 'active', next_execution_at = ${now}
+    WHERE id = ${id} AND owner_wallet = ${ownerWallet} AND status = 'paused'
+  `;
+  return result.count > 0;
 }
 
 export interface DashboardData {
@@ -149,40 +148,38 @@ export interface DashboardData {
   }[];
 }
 
-export function getDashboardData(ownerWallet: string): DashboardData {
-  const db = getDb();
-
-  const policies = db.prepare(`
+export async function getDashboardData(ownerWallet: string): Promise<DashboardData> {
+  const policies = await sql<(StoredPolicy & { last_error?: string | null; last_job_status?: string | null })[]>`
     SELECT p.*,
       (SELECT j.error  FROM jobs j WHERE j.policy_id = p.id ORDER BY j.created_at DESC LIMIT 1) AS last_error,
       (SELECT j.status FROM jobs j WHERE j.policy_id = p.id ORDER BY j.created_at DESC LIMIT 1) AS last_job_status
     FROM policies p
-    WHERE p.owner_wallet = ?
+    WHERE p.owner_wallet = ${ownerWallet}
     ORDER BY p.created_at DESC
-  `).all(ownerWallet) as unknown as StoredPolicy[];
+  `;
 
-  const counts = db.prepare(`
+  const [counts] = await sql<{ executed: string; pending: string; failed: string }[]>`
     SELECT
-      COUNT(CASE WHEN j.status = 'done' THEN 1 END)                    AS executed,
-      COUNT(CASE WHEN j.status IN ('pending', 'processing') THEN 1 END) AS pending,
-      COUNT(CASE WHEN j.status = 'failed' THEN 1 END)                  AS failed
+      COUNT(CASE WHEN j.status = 'done'                         THEN 1 END) AS executed,
+      COUNT(CASE WHEN j.status IN ('pending', 'processing')     THEN 1 END) AS pending,
+      COUNT(CASE WHEN j.status = 'failed'                       THEN 1 END) AS failed
     FROM jobs j
     JOIN policies p ON j.policy_id = p.id
-    WHERE p.owner_wallet = ?
-  `).get(ownerWallet) as { executed: number; pending: number; failed: number };
+    WHERE p.owner_wallet = ${ownerWallet}
+  `;
 
-  const recent_jobs = db.prepare(`
+  const recent_jobs = await sql<DashboardData["recent_jobs"]>`
     SELECT j.id, j.policy_id, j.status, j.tx_hash, j.error, j.created_at,
            p.recipient_display_name, p.frequency
     FROM jobs j
     JOIN policies p ON j.policy_id = p.id
-    WHERE p.owner_wallet = ?
+    WHERE p.owner_wallet = ${ownerWallet}
     ORDER BY j.created_at DESC
     LIMIT 20
-  `).all(ownerWallet) as unknown as DashboardData["recent_jobs"];
+  `;
 
-  const executed = counts?.executed ?? 0;
-  const failed = counts?.failed ?? 0;
+  const executed = Number(counts?.executed ?? 0);
+  const failed = Number(counts?.failed ?? 0);
   const total_finished = executed + failed;
 
   return {
@@ -190,7 +187,7 @@ export function getDashboardData(ownerWallet: string): DashboardData {
       active_policies: policies.filter((p) => p.status === "active").length,
       total_policies: policies.length,
       jobs_executed: executed,
-      jobs_pending: counts?.pending ?? 0,
+      jobs_pending: Number(counts?.pending ?? 0),
       jobs_failed: failed,
       success_rate: total_finished === 0 ? 0 : Math.round((executed / total_finished) * 100),
     },
@@ -199,18 +196,20 @@ export function getDashboardData(ownerWallet: string): DashboardData {
   };
 }
 
-export function advancePolicy(id: string, executedAt: Date): void {
-  const db = getDb();
-  const policy = db.prepare(`SELECT * FROM policies WHERE id = ?`).get(id) as unknown as StoredPolicy | undefined;
+export async function advancePolicy(id: string, executedAt: Date): Promise<void> {
+  const rows = await sql<StoredPolicy[]>`SELECT * FROM policies WHERE id = ${id}`;
+  const policy = rows[0];
   if (!policy) return;
 
   const next = nextExecutionDate(policy.frequency, executedAt);
+  const executedAtIso = executedAt.toISOString();
 
   if (!next) {
-    db.prepare(`UPDATE policies SET status = 'expired', last_executed_at = ? WHERE id = ?`)
-      .run(executedAt.toISOString(), id);
+    await sql`UPDATE policies SET status = 'expired', last_executed_at = ${executedAtIso} WHERE id = ${id}`;
   } else {
-    db.prepare(`UPDATE policies SET last_executed_at = ?, next_execution_at = ? WHERE id = ?`)
-      .run(executedAt.toISOString(), next.toISOString(), id);
+    await sql`
+      UPDATE policies SET last_executed_at = ${executedAtIso}, next_execution_at = ${next.toISOString()}
+      WHERE id = ${id}
+    `;
   }
 }

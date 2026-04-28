@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getDb } from "./db.js";
+import { sql } from "./db.js";
 
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 
@@ -14,14 +14,7 @@ export interface Job {
   created_at: string;
 }
 
-export interface JobPayload {
-  policyId: string;
-  recipientWallet: string;
-  amountUsdc: string;
-  vaultAddress: string;
-}
-
-export function createJob(policyId: string): Job {
+export async function createJob(policyId: string): Promise<Job> {
   const job: Job = {
     id: randomUUID(),
     policy_id: policyId,
@@ -29,32 +22,36 @@ export function createJob(policyId: string): Job {
     attempt: 0,
     created_at: new Date().toISOString(),
   };
-  getDb().prepare(`
+  await sql`
     INSERT INTO jobs (id, policy_id, status, attempt, created_at)
-    VALUES (@id, @policy_id, @status, @attempt, @created_at)
-  `).run(job as unknown as Record<string, string | number | null>);
+    VALUES (${job.id}, ${job.policy_id}, ${job.status}, ${job.attempt}, ${job.created_at})
+  `;
   return job;
 }
 
-export function getJob(id: string): Job | undefined {
-  return getDb().prepare(`SELECT * FROM jobs WHERE id = ?`).get(id) as unknown as Job | undefined;
+export async function getJob(id: string): Promise<Job | undefined> {
+  const rows = await sql<Job[]>`SELECT * FROM jobs WHERE id = ${id}`;
+  return rows[0];
 }
 
-export function listPendingJobs(): Job[] {
-  return getDb().prepare(`
+export async function listPendingJobs(): Promise<Job[]> {
+  return sql<Job[]>`
     SELECT * FROM jobs
     WHERE status = 'pending'
-      AND (next_retry_at IS NULL OR next_retry_at <= datetime('now'))
+      AND (next_retry_at IS NULL OR next_retry_at::timestamptz <= NOW())
     ORDER BY created_at ASC
-  `).all() as unknown as Job[];
+  `;
 }
 
-export function updateJob(
+export async function updateJob(
   id: string,
   patch: Partial<Pick<Job, "status" | "tx_hash" | "error" | "attempt" | "next_retry_at">>,
-): Job | undefined {
-  const db = getDb();
-  const sets = Object.keys(patch).map((k) => `${k} = @${k}`).join(", ");
-  db.prepare(`UPDATE jobs SET ${sets} WHERE id = @id`).run({ ...patch, id } as unknown as Record<string, string | number | null>);
+): Promise<Job | undefined> {
+  const entries = Object.entries(patch).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) return getJob(id);
+
+  const parts = entries.map(([k], i) => `${k} = $${i + 1}`).join(", ");
+  const values = [...entries.map(([, v]) => v), id];
+  await sql.unsafe(`UPDATE jobs SET ${parts} WHERE id = $${entries.length + 1}`, values as string[]);
   return getJob(id);
 }

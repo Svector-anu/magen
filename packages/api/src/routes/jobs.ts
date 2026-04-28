@@ -4,12 +4,12 @@ import { getJob, listPendingJobs } from "../services/jobStore.js";
 
 export const jobsRouter = Router();
 
-jobsRouter.get("/jobs/pending", requireAgent, (_req: Request, res: Response) => {
-  res.json(listPendingJobs());
+jobsRouter.get("/jobs/pending", requireAgent, async (_req: Request, res: Response) => {
+  res.json(await listPendingJobs());
 });
 
-jobsRouter.get("/jobs/:id", (req: Request, res: Response) => {
-  const job = getJob(req.params.id);
+jobsRouter.get("/jobs/:id", async (req: Request, res: Response) => {
+  const job = await getJob(req.params.id);
   if (!job) {
     res.status(404).json({ error: "Job not found" });
     return;

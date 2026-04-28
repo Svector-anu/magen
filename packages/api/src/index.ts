@@ -11,6 +11,7 @@ import { policiesRouter } from "./routes/policies.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { adminRouter } from "./routes/admin.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { migrate } from "./services/db.js";
 import { listDuePolicies } from "./services/policyStore.js";
 import { createJob, listPendingJobs } from "./services/jobStore.js";
 import { isPaused } from "./services/pause.js";
@@ -40,15 +41,15 @@ app.use("/api", adminRouter);
 
 const SCHEDULER_INTERVAL_MS = 30_000;
 
-function runScheduler(): void {
+async function runScheduler(): Promise<void> {
   if (isPaused()) {
     console.warn("[scheduler] execution paused — skipping");
     return;
   }
   try {
-    const due = listDuePolicies();
+    const due = await listDuePolicies();
     for (const policy of due) {
-      const job = createJob(policy.id);
+      const job = await createJob(policy.id);
       notify({ type: "scheduler.queued", jobId: job.id, policyId: policy.id });
       console.log(`[scheduler] queued job ${job.id} for policy ${policy.id} (${policy.amount_usdc} USDC → ${policy.recipient_display_name})`);
     }
@@ -62,7 +63,7 @@ const EXECUTOR_INTERVAL_MS = 5_000;
 async function runExecutor(): Promise<void> {
   if (isPaused()) return;
   try {
-    const jobs = listPendingJobs();
+    const jobs = await listPendingJobs();
     for (const job of jobs) {
       console.log(`[executor] picking up job ${job.id}`);
       await runJob(job.id);
@@ -72,10 +73,18 @@ async function runExecutor(): Promise<void> {
   }
 }
 
-app.listen(port, () => {
-  console.log(`Magen API listening on port ${port}`);
-  runScheduler();
-  setInterval(runScheduler, SCHEDULER_INTERVAL_MS);
-  void runExecutor();
-  setInterval(() => void runExecutor(), EXECUTOR_INTERVAL_MS);
-});
+migrate()
+  .then(() => {
+    console.log("[db] migrations applied");
+    app.listen(port, () => {
+      console.log(`Magen API listening on port ${port}`);
+      void runScheduler();
+      setInterval(() => void runScheduler(), SCHEDULER_INTERVAL_MS);
+      void runExecutor();
+      setInterval(() => void runExecutor(), EXECUTOR_INTERVAL_MS);
+    });
+  })
+  .catch((err) => {
+    console.error("[db] migration failed:", err);
+    process.exit(1);
+  });

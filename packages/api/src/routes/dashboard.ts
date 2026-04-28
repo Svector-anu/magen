@@ -4,6 +4,6 @@ import { makeRequireWallet } from "../middleware/requireWallet.js";
 
 export const dashboardRouter = Router();
 
-dashboardRouter.get("/dashboard", makeRequireWallet("list-policies"), (req: Request, res: Response) => {
-  res.json(getDashboardData(req.verifiedWallet!));
+dashboardRouter.get("/dashboard", makeRequireWallet("list-policies"), async (req: Request, res: Response) => {
+  res.json(await getDashboardData(req.verifiedWallet!));
 });

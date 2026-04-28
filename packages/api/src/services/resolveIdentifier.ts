@@ -86,12 +86,12 @@ export async function resolveIdentifier(
   const trimmed = identifier.trim().toLowerCase();
 
   // 1. Exact match in contact store
-  const existing = findByIdentifier(trimmed);
+  const existing = await findByIdentifier(trimmed);
   if (existing) return { status: "found", contact: existing };
 
   // 2. Raw EVM address
   if (EVM_ADDRESS_RE.test(trimmed)) {
-    const contact = upsertContact({
+    const contact = await upsertContact({
       display_name: trimmed.slice(0, 10) + "…",
       aliases: [],
       wallet_address: trimmed,
@@ -109,7 +109,7 @@ export async function resolveIdentifier(
     for (const candidate of candidates) {
       const resolved = await tryEns(candidate);
       if (resolved) {
-        const contact = upsertContact({
+        const contact = await upsertContact({
           display_name: bare,
           aliases: trimmed !== bare ? [trimmed] : [],
           ens_name: candidate,
@@ -125,7 +125,7 @@ export async function resolveIdentifier(
   // 5. Bare name (no dot) — try Farcaster username, then X cross-ref, then ENS fallback
   const farcaster = await tryFarcasterByUsername(bare);
   if (farcaster) {
-    const contact = upsertContact({
+    const contact = await upsertContact({
       display_name: farcaster.displayName,
       aliases: trimmed !== bare ? [trimmed] : [],
       wallet_address: farcaster.address,
@@ -136,7 +136,7 @@ export async function resolveIdentifier(
 
   const xResult = await tryFarcasterByX(bare);
   if (xResult) {
-    const contact = upsertContact({
+    const contact = await upsertContact({
       display_name: xResult.displayName,
       aliases: trimmed !== bare ? [trimmed] : [],
       wallet_address: xResult.address,
@@ -147,7 +147,7 @@ export async function resolveIdentifier(
 
   const ensAddress = await tryEns(`${bare}.eth`);
   if (ensAddress) {
-    const contact = upsertContact({
+    const contact = await upsertContact({
       display_name: bare,
       aliases: trimmed !== bare ? [trimmed] : [],
       ens_name: `${bare}.eth`,

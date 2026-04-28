@@ -18,7 +18,7 @@ executeRouter.post("/execute", requireAgent, async (req: Request, res: Response)
   }
 
   const { jobId } = body.data;
-  if (!getJob(jobId)) {
+  if (!await getJob(jobId)) {
     res.status(404).json({ error: "Job not found" });
     return;
   }

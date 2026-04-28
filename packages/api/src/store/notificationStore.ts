@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getDb } from "../services/db.js";
+import { sql } from "../services/db.js";
 
 export type NotificationType = "payment_sent" | "payment_received" | "payment_failed";
 
@@ -16,7 +16,7 @@ export interface AppNotification {
   created_at: string;
 }
 
-export function createNotification(params: {
+export async function createNotification(params: {
   wallet: string;
   type: NotificationType;
   title: string;
@@ -24,46 +24,36 @@ export function createNotification(params: {
   policy_id?: string;
   job_id?: string;
   tx_hash?: string;
-}): AppNotification {
+}): Promise<void> {
   const now = new Date().toISOString();
-  const n: AppNotification = {
-    id: randomUUID(),
-    wallet: params.wallet.toLowerCase(),
-    type: params.type,
-    title: params.title,
-    body: params.body,
-    policy_id: params.policy_id ?? null,
-    job_id: params.job_id ?? null,
-    tx_hash: params.tx_hash ?? null,
-    read_at: null,
-    created_at: now,
-  };
-  getDb()
-    .prepare(
-      `INSERT INTO notifications (id, wallet, type, title, body, policy_id, job_id, tx_hash, read_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  await sql`
+    INSERT INTO notifications (id, wallet, type, title, body, policy_id, job_id, tx_hash, read_at, created_at)
+    VALUES (
+      ${randomUUID()}, ${params.wallet.toLowerCase()}, ${params.type},
+      ${params.title}, ${params.body},
+      ${params.policy_id ?? null}, ${params.job_id ?? null}, ${params.tx_hash ?? null},
+      ${null}, ${now}
     )
-    .run(n.id, n.wallet, n.type, n.title, n.body, n.policy_id, n.job_id, n.tx_hash, n.read_at, n.created_at);
-  return n;
+  `;
 }
 
-export function listNotifications(wallet: string, limit = 50): AppNotification[] {
-  return getDb()
-    .prepare(
-      `SELECT * FROM notifications WHERE wallet = ? ORDER BY created_at DESC LIMIT ?`
-    )
-    .all(wallet.toLowerCase(), limit) as unknown as AppNotification[];
+export async function listNotifications(wallet: string, limit = 50): Promise<AppNotification[]> {
+  return sql<AppNotification[]>`
+    SELECT * FROM notifications WHERE wallet = ${wallet.toLowerCase()}
+    ORDER BY created_at DESC LIMIT ${limit}
+  `;
 }
 
-export function countUnread(wallet: string): number {
-  const row = getDb()
-    .prepare(`SELECT COUNT(*) as n FROM notifications WHERE wallet = ? AND read_at IS NULL`)
-    .get(wallet.toLowerCase()) as { n: number };
-  return row.n;
+export async function countUnread(wallet: string): Promise<number> {
+  const [row] = await sql<{ n: string }[]>`
+    SELECT COUNT(*) AS n FROM notifications WHERE wallet = ${wallet.toLowerCase()} AND read_at IS NULL
+  `;
+  return Number(row?.n ?? 0);
 }
 
-export function markAllRead(wallet: string): void {
-  getDb()
-    .prepare(`UPDATE notifications SET read_at = ? WHERE wallet = ? AND read_at IS NULL`)
-    .run(new Date().toISOString(), wallet.toLowerCase());
+export async function markAllRead(wallet: string): Promise<void> {
+  await sql`
+    UPDATE notifications SET read_at = ${new Date().toISOString()}
+    WHERE wallet = ${wallet.toLowerCase()} AND read_at IS NULL
+  `;
 }
