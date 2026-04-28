@@ -1,6 +1,6 @@
 .footer {
   width: 100%;
-  background: #ffffff;
+  background: var(--bg);
   position: relative;
   overflow: hidden;
 }
@@ -73,7 +73,7 @@
   font-family: var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #a0a8bc;
+  color: var(--text-dim);
 }
 
 .cta {
@@ -97,7 +97,7 @@
 .ctaLink {
   font-size: 13px;
   font-family: var(--font-mono);
-  color: #a0a8bc;
+  color: var(--text-dim);
   text-decoration: none;
   letter-spacing: 0.02em;
   transition: color 0.18s;
@@ -105,7 +105,7 @@
 }
 
 .ctaLink:hover {
-  color: #7c3aed;
+  color: var(--blue);
 }
 
 /* ── right nav ── */
@@ -122,7 +122,7 @@
   font-size: 13px;
   font-family: var(--font-sans);
   font-weight: 500;
-  color: #6b7082;
+  color: var(--text-muted);
   text-decoration: none;
   letter-spacing: -0.01em;
   transition: color 0.18s;
@@ -130,7 +130,7 @@
 
 .footerLink:hover,
 .footerLink.active {
-  color: #1a1523;
+  color: var(--text);
 }
 
 /* ── wordmark ── */
@@ -174,7 +174,7 @@
 .copy {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: #a0a8bc;
+  color: var(--text-dim);
   letter-spacing: 0.03em;
 }
 
@@ -187,19 +187,19 @@
 .bottomLink {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: #a0a8bc;
+  color: var(--text-dim);
   text-decoration: none;
   letter-spacing: 0.03em;
   transition: color 0.15s;
 }
 
 .bottomLink:hover {
-  color: #6b7082;
+  color: var(--text-muted);
 }
 
 .bottomDot {
   font-size: 11px;
-  color: #d1d5e0;
+  color: var(--border);
 }
 
 /* ── responsive ── */

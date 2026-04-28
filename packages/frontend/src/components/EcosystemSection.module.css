@@ -126,5 +126,15 @@
 @media (max-width: 768px) {
   .section { min-height: 420vh; }
   .center { padding: 0 24px; gap: 4px; }
+
+  /* override inline-style sizes — keep only 4 icons, smaller */
   .icon:nth-child(n + 5) { display: none; }
+  .icon { width: 56px !important; height: 56px !important; }
+  .icon img { width: 56px !important; height: 56px !important; }
+}
+
+@media (max-width: 400px) {
+  .icon { width: 44px !important; height: 44px !important; }
+  .icon img { width: 44px !important; height: 44px !important; }
+  .center { padding: 0 16px; }
 }

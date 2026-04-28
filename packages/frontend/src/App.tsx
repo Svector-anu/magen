@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { arbitrumSepolia } from "wagmi/chains";
 import { wagmiConfig } from "./lib/wagmiConfig.js";
 import { WalletButton } from "./components/WalletButton.js";
+import { ThemeToggle } from "./components/ThemeToggle.js";
 import { NotificationBanner } from "./components/NotificationBanner.js";
 import { EmailOptInModal } from "./components/EmailOptInModal.js";
 import { Footer } from "./components/Footer.js";
@@ -88,6 +89,7 @@ export function App() {
                 </nav>
 
                 <div className={styles.navRight}>
+                  <ThemeToggle />
                   <WalletButton />
                 </div>
               </header>
