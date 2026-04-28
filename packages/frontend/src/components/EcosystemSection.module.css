@@ -126,11 +126,18 @@
 @media (max-width: 768px) {
   .section { min-height: 320vh; }
 
+  /* 100svh = small viewport height — stays stable as mobile browser chrome
+     shows/hides, so the sticky frame never shifts and text stays truly centered */
+  .sticky {
+    height: 100vh;     /* fallback for older browsers */
+    height: 100svh;
+  }
+
   /* hide all floating icons — they overlap text at mobile viewport widths */
   .icon { display: none !important; }
 
   .center {
-    padding: 0 28px;
+    padding: 72px 28px 40px; /* top: clear fixed header (64px) + breathing room */
     gap: 6px;
   }
 
@@ -144,5 +151,5 @@
 
 @media (max-width: 400px) {
   .section { min-height: 280vh; }
-  .center { padding: 0 20px; }
+  .center { padding: 64px 20px 32px; }
 }
