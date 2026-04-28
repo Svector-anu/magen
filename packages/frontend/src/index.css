@@ -5,21 +5,21 @@
 }
 
 :root {
-  --bg:           #f7f8fc;
-  --bg-panel:     #ffffff;
-  --bg-elevated:  #f0f1f8;
-  --bg-hover:     #eaebf5;
-  --border:       #e2e4ef;
-  --border-blue:  rgba(124, 58, 237, 0.2);
-  --text:         #1a1523;
-  --text-muted:   #6b7082;
-  --text-dim:     #a0a8bc;
-  --blue:         #7c3aed;
-  --blue-bright:  #6d28d9;
-  --blue-glow:    rgba(124, 58, 237, 0.12);
-  --green:        #16a34a;
-  --amber:        #b45309;
-  --red:          #dc2626;
+  --bg:           #090b0f;
+  --bg-panel:     #0f1117;
+  --bg-elevated:  #161b22;
+  --bg-hover:     #1c2128;
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-blue:  rgba(47, 129, 247, 0.2);
+  --text:         #e6edf3;
+  --text-muted:   #8b949e;
+  --text-dim:     rgba(255, 255, 255, 0.3);
+  --blue:         #2f81f7;
+  --blue-bright:  #58a6ff;
+  --blue-glow:    rgba(47, 129, 247, 0.12);
+  --green:        #3fb950;
+  --amber:        #d29922;
+  --red:          #f87171;
   --font-mono:     'IBM Plex Mono', 'Fira Code', monospace;
   --font-sans:     'Inter', system-ui, sans-serif;
   --font-display:  'DM Sans', 'Inter', sans-serif;

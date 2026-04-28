@@ -17,7 +17,7 @@
   align-items: center;
   padding: 0 32px;
   height: 64px;
-  background: rgba(247, 248, 252, 0.88);
+  background: rgba(9, 11, 15, 0.88);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -36,8 +36,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 100px;
   padding: 4px;
 }
@@ -49,7 +49,7 @@
   font-size: 13px;
   font-family: var(--font-sans);
   font-weight: 500;
-  color: rgba(26, 21, 35, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   text-decoration: none;
   padding: 7px 16px;
   border-radius: 100px;
@@ -62,19 +62,19 @@
 
 .navLink:hover {
   color: var(--text);
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .navActive {
-  color: #7c3aed !important;
-  background: rgba(124, 58, 237, 0.1) !important;
+  color: #2f81f7 !important;
+  background: rgba(47, 129, 247, 0.1) !important;
 }
 
 /* ── Divider between nav items ── */
 .navDivider {
   width: 1px;
   height: 16px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
   align-self: center;
 }
@@ -121,8 +121,8 @@
     grid-column: 1 / -1;
     grid-row: 2;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.07);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 100px;
     padding: 4px;
     gap: 2px;
