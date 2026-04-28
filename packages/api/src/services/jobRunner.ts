@@ -15,7 +15,10 @@ function isPermanentError(err: unknown): boolean {
   return (
     msg.includes("CALL_EXCEPTION") ||
     msg.includes("Missing required env") ||
-    msg.includes("INSUFFICIENT_FUNDS")
+    msg.includes("INSUFFICIENT_FUNDS") ||
+    msg.includes("OperatorNotActive") ||
+    msg.includes("UnauthorizedCaller") ||
+    msg.includes("Transaction reverted")
   );
 }
 
@@ -38,7 +41,11 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
     return { ok: false, error: "Execution paused" };
   }
 
-  updateJob(jobId, { status: "processing" });
+  const claimed = getDb()
+    .prepare(`UPDATE jobs SET status = 'processing' WHERE id = ? AND status = 'pending'`)
+    .run(jobId);
+  if (claimed.changes === 0) return { ok: false, error: "Job already being processed" };
+
   notify({ type: "execution.attempt", jobId, policyId: policy.id, attempt: job.attempt, maxAttempts: MAX_ATTEMPTS });
 
   try {
@@ -48,10 +55,19 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
       recipientWallet: policy.recipient_wallet,
       amountUsdc: policy.amount_usdc,
       vaultAddress: policy.vault_address,
+      auditorWallet: policy.auditor_wallet,
     });
 
-    updateJob(jobId, { status: "done", tx_hash: result.txHash });
-    advancePolicy(policy.id, new Date());
+    const db = getDb();
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      updateJob(jobId, { status: "done", tx_hash: result.txHash });
+      advancePolicy(policy.id, new Date());
+      db.exec("COMMIT");
+    } catch (txErr) {
+      try { db.exec("ROLLBACK"); } catch { /* ignore */ }
+      throw txErr;
+    }
     notify({ type: "execution.success", jobId, policyId: policy.id, txHash: result.txHash });
     console.log(`[jobRunner] job ${jobId} done — txHash: ${result.txHash}`);
     sendNotification(

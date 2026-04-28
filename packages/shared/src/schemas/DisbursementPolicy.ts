@@ -33,6 +33,12 @@ export const DisbursementPolicySchema = z.object({
 
   memo: z.string().max(280).nullish().transform(v => v ?? undefined),
 
+  auditor_wallet: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/, "Must be a valid EVM address")
+    .nullish()
+    .transform(v => v ?? undefined),
+
   created_at: z.string().datetime(),
 }).superRefine((val, ctx) => {
   if (val.approval_mode === "approve-for-period" && !val.approval_period_end) {

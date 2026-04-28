@@ -37,6 +37,7 @@ parseRouter.post("/parse-instruction", parseLimiter, async (req: Request, res: R
           : "validation_failed",
         validationErrors: result.validationErrors,
         enrichment: result.enrichment,
+        recipientDisplayName: result.recipientDisplayName,
       });
       return;
     }
@@ -44,6 +45,7 @@ parseRouter.post("/parse-instruction", parseLimiter, async (req: Request, res: R
     res.json({
       policy: result.policy,
       enrichment: result.enrichment,
+      recipientResolutionSource: result.recipientResolutionSource,
     });
   } catch (err) {
     console.error("[parse-instruction] error:", err);

@@ -50,12 +50,28 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_jobs_policy_id ON jobs(policy_id);
     CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
     CREATE INDEX IF NOT EXISTS idx_policies_status ON policies(status);
+
+    CREATE TABLE IF NOT EXISTS contacts (
+      id                 TEXT PRIMARY KEY,
+      display_name       TEXT NOT NULL,
+      aliases            TEXT NOT NULL DEFAULT '[]',
+      email              TEXT,
+      ens_name           TEXT,
+      wallet_address     TEXT,
+      resolution_status  TEXT NOT NULL DEFAULT 'unresolved',
+      created_at         TEXT NOT NULL,
+      updated_at         TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contacts_wallet ON contacts(wallet_address);
+    CREATE INDEX IF NOT EXISTS idx_contacts_ens ON contacts(ens_name);
   `);
 
   for (const col of [
     "ALTER TABLE jobs ADD COLUMN attempt INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE jobs ADD COLUMN next_retry_at TEXT",
     "ALTER TABLE policies ADD COLUMN owner_wallet TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE policies ADD COLUMN auditor_wallet TEXT",
   ]) {
     try { db.exec(col); } catch { /* column already exists */ }
   }

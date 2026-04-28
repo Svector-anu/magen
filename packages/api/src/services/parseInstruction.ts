@@ -29,6 +29,7 @@ RULES:
 - recipient_wallet: must be a valid 0x EVM address (42 hex chars). If the input uses a name/ENS that you cannot resolve to a confirmed wallet, set recipient_wallet to "UNRESOLVED" and recipient_display_name to the name given.
 - memo: optional note, max 280 chars.
 - approval_period_end: ISO 8601 UTC datetime. REQUIRED when approval_mode is "approve-for-period".
+- auditor_wallet: if the instruction mentions an auditor, compliance officer, or anyone who should be able to "see" or "audit" the amounts, extract their 0x wallet address here. Only include if an explicit 0x address is given for the auditor — do not hallucinate. Omit if not mentioned.
 
 IMPORTANT: If the recipient wallet address cannot be determined from the instruction, return recipient_wallet as "UNRESOLVED". The caller will handle resolution. Do not hallucinate wallet addresses.
 
@@ -42,12 +43,24 @@ Respond with ONLY a JSON object matching this exact shape:
   "end_date": string | undefined,
   "approval_mode": "ask-every-time" | "approve-for-period" | "continue-until-revoked",
   "approval_period_end": string | undefined,
-  "memo": string | undefined
+  "memo": string | undefined,
+  "auditor_wallet": string | undefined
 }`;
+
+export type RecipientResolutionSource =
+  | "direct"
+  | "contact"
+  | "ens"
+  | "farcaster"
+  | "farcaster_x"
+  | "address_only"
+  | null;
 
 export interface ParseResult {
   policy: DisbursementPolicy | null;
   recipientUnresolved: boolean;
+  recipientDisplayName: string | null;
+  recipientResolutionSource: RecipientResolutionSource;
   rawLlmOutput: object;
   enrichment: object;
   validationErrors: string[] | null;
@@ -76,6 +89,8 @@ export async function parseInstruction(
     return {
       policy: null,
       recipientUnresolved: false,
+      recipientDisplayName: null,
+      recipientResolutionSource: null,
       rawLlmOutput: {},
       enrichment: {},
       validationErrors: ["LLM returned non-JSON output"],
@@ -87,6 +102,8 @@ export async function parseInstruction(
   const isUnresolved =
     (rawLlmOutput as Record<string, unknown>)["recipient_wallet"] === "UNRESOLVED";
 
+  let recipientResolutionSource: RecipientResolutionSource = isUnresolved ? null : "direct";
+
   if (isUnresolved) {
     const displayName = String((rawLlmOutput as Record<string, unknown>)["recipient_display_name"] ?? "");
     const outcome = displayName ? await resolveIdentifier(displayName) : { status: "not_found" as const };
@@ -94,10 +111,18 @@ export async function parseInstruction(
     if (outcome.status !== "not_found") {
       (rawLlmOutput as Record<string, unknown>)["recipient_wallet"] = outcome.contact.wallet_address;
       (rawLlmOutput as Record<string, unknown>)["recipient_display_name"] = outcome.contact.display_name;
+      recipientResolutionSource =
+        outcome.status === "found" ? "contact" :
+        outcome.status === "ens_resolved" ? "ens" :
+        outcome.status === "farcaster_resolved" ? "farcaster" :
+        outcome.status === "x_resolved" ? "farcaster_x" :
+        "address_only";
     } else {
       return {
         policy: null,
         recipientUnresolved: true,
+        recipientDisplayName: displayName || null,
+        recipientResolutionSource: null,
         rawLlmOutput,
         enrichment,
         validationErrors: [`Could not resolve "${displayName}" to a wallet address`],
@@ -117,6 +142,8 @@ export async function parseInstruction(
     return {
       policy: null,
       recipientUnresolved: false,
+      recipientDisplayName: null,
+      recipientResolutionSource: null,
       rawLlmOutput,
       enrichment,
       validationErrors: result.error.issues.map(
@@ -128,6 +155,8 @@ export async function parseInstruction(
   return {
     policy: result.data,
     recipientUnresolved: false,
+    recipientDisplayName: result.data.recipient_display_name,
+    recipientResolutionSource,
     rawLlmOutput,
     enrichment,
     validationErrors: null,

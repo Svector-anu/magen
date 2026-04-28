@@ -2,6 +2,20 @@ import { JsonRpcProvider, Wallet, Contract, Interface, id as keccak256Id, getAdd
 import { createEthersHandleClient } from "@iexec-nox/handle";
 import type { Handle } from "@iexec-nox/handle";
 
+const NOX_COMPUTE_ADDRESS = "0xd464B198f06756a1d00be223634b85E0a731c229";
+const NOX_COMPUTE_ABI = [
+  {
+    inputs: [
+      { internalType: "bytes32", name: "handle", type: "bytes32" },
+      { internalType: "address", name: "account", type: "address" },
+    ],
+    name: "allow",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
 const NOX_GATEWAY =
   process.env.NOX_GATEWAY_URL ??
   "https://2e1800fc0dddeeadc189283ed1dce13c1ae28d48-3000.apps.ovh-tdx-dev.noxprotocol.dev";
@@ -46,8 +60,8 @@ const AGENT_ABI = [
   {
     inputs: [
       { internalType: "address", name: "vault", type: "address" },
-      { internalType: "address", name: "recipient", type: "address" },
       { internalType: "address", name: "payer", type: "address" },
+      { internalType: "address", name: "recipient", type: "address" },
       { internalType: "externalEuint256", name: "encryptedAmount", type: "bytes32" },
       { internalType: "bytes", name: "inputProof", type: "bytes" },
       { internalType: "bytes32", name: "policyId", type: "bytes32" },
@@ -74,7 +88,9 @@ const AGENT_IFACE = new Interface(AGENT_ABI as unknown as never[]);
 function usdcToAtomic(amountUsdc: string): bigint {
   const [whole, frac = ""] = amountUsdc.split(".");
   const fracPadded = frac.padEnd(6, "0").slice(0, 6);
-  return BigInt(whole) * 1_000_000n + BigInt(fracPadded);
+  const result = BigInt(whole) * 1_000_000n + BigInt(fracPadded);
+  if (result === 0n) throw new Error(`usdcToAtomic: zero amount derived from "${amountUsdc}"`);
+  return result;
 }
 
 export interface ExecuteResult {
@@ -87,8 +103,9 @@ export async function executePolicy(params: {
   recipientWallet: string;
   amountUsdc: string;
   vaultAddress: string;
+  auditorWallet?: string;
 }): Promise<ExecuteResult> {
-  const { policyId, payerWallet, recipientWallet, amountUsdc, vaultAddress } = params;
+  const { policyId, payerWallet, recipientWallet, amountUsdc, vaultAddress, auditorWallet } = params;
 
   const rpcUrl = process.env.ARBITRUM_SEPOLIA_RPC;
   const privateKey = process.env.PRIVATE_KEY;
@@ -126,6 +143,9 @@ export async function executePolicy(params: {
   );
 
   const receipt = await tx.wait();
+  if (!receipt || receipt.status === 0) {
+    throw new Error(`Transaction reverted: ${tx.hash}`);
+  }
 
   const routedLog = receipt.logs
     .map((log: { topics: string[]; data: string }) => {
@@ -144,6 +164,17 @@ export async function executePolicy(params: {
     } catch (err) {
       if (err instanceof Error && err.message.startsWith("Silent zero transfer")) throw err;
       console.error("[executePolicy] handle decrypt skipped:", err instanceof Error ? err.message : String(err));
+    }
+
+    if (auditorWallet) {
+      try {
+        const noxCompute = new Contract(NOX_COMPUTE_ADDRESS, NOX_COMPUTE_ABI as unknown as never[], wallet);
+        const allowTx = await noxCompute.allow(transferredHandle, getAddress(auditorWallet));
+        await allowTx.wait();
+        console.log(`[executePolicy] auditor ACL granted: handle=${transferredHandle} auditor=${auditorWallet}`);
+      } catch (err) {
+        console.error("[executePolicy] auditor allow failed:", err instanceof Error ? err.message : String(err));
+      }
     }
   }
 

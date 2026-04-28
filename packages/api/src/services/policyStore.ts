@@ -14,6 +14,7 @@ export interface StoredPolicy {
   end_date?: string;
   approval_period_end?: string;
   memo?: string;
+  auditor_wallet?: string;
   vault_address: string;
   status: "active" | "cancelled" | "expired" | "paused";
   last_executed_at?: string;
@@ -51,6 +52,7 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string, o
     end_date: policy.end_date,
     approval_period_end: policy.approval_period_end,
     memo: policy.memo,
+    auditor_wallet: policy.auditor_wallet,
     vault_address: vaultAddress,
     status: "active",
     next_execution_at: firstExecution.toISOString(),
@@ -63,11 +65,11 @@ export function createPolicy(policy: DisbursementPolicy, vaultAddress: string, o
   db.prepare(`
     INSERT INTO policies (
       id, owner_wallet, recipient_wallet, recipient_display_name, amount_usdc, frequency,
-      approval_mode, start_date, end_date, approval_period_end, memo,
+      approval_mode, start_date, end_date, approval_period_end, memo, auditor_wallet,
       vault_address, status, last_executed_at, next_execution_at, created_at
     ) VALUES (
       @id, @owner_wallet, @recipient_wallet, @recipient_display_name, @amount_usdc, @frequency,
-      @approval_mode, @start_date, @end_date, @approval_period_end, @memo,
+      @approval_mode, @start_date, @end_date, @approval_period_end, @memo, @auditor_wallet,
       @vault_address, @status, @last_executed_at, @next_execution_at, @created_at
     )
   `).run(params as unknown as Record<string, string | number | null>);
@@ -134,7 +136,7 @@ export interface DashboardData {
     jobs_failed: number;
     success_rate: number;
   };
-  policies: StoredPolicy[];
+  policies: (StoredPolicy & { last_error?: string | null; last_job_status?: string | null })[];
   recent_jobs: {
     id: string;
     policy_id: string;
@@ -150,9 +152,14 @@ export interface DashboardData {
 export function getDashboardData(ownerWallet: string): DashboardData {
   const db = getDb();
 
-  const policies = db.prepare(
-    `SELECT * FROM policies WHERE owner_wallet = ? ORDER BY created_at DESC`
-  ).all(ownerWallet) as unknown as StoredPolicy[];
+  const policies = db.prepare(`
+    SELECT p.*,
+      (SELECT j.error  FROM jobs j WHERE j.policy_id = p.id ORDER BY j.created_at DESC LIMIT 1) AS last_error,
+      (SELECT j.status FROM jobs j WHERE j.policy_id = p.id ORDER BY j.created_at DESC LIMIT 1) AS last_job_status
+    FROM policies p
+    WHERE p.owner_wallet = ?
+    ORDER BY p.created_at DESC
+  `).all(ownerWallet) as unknown as StoredPolicy[];
 
   const counts = db.prepare(`
     SELECT
