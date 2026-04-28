@@ -28,7 +28,7 @@ export function OnboardingChecklist() {
 
   return (
     <>
-      {showWrap && <WrapUsdcModal onClose={() => setShowWrap(false)} />}
+      {showWrap && <WrapUsdcModal onClose={() => setShowWrap(false)} onSuccess={dismiss} />}
       <div className={styles.card}>
         <div className={styles.header}>
           <span className={styles.title}>before your first payment</span>

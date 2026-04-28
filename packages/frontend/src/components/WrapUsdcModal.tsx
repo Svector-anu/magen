@@ -6,9 +6,10 @@ import styles from "./WrapUsdcModal.module.css";
 
 interface Props {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function WrapUsdcModal({ onClose }: Props) {
+export function WrapUsdcModal({ onClose, onSuccess }: Props) {
   const { address } = useAccount();
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<"input" | "approving" | "wrapping" | "done">("input");
@@ -41,8 +42,9 @@ export function WrapUsdcModal({ onClose }: Props) {
       setTxHash(wrap.hash);
       setStep("done");
       void refetchBalance();
+      onSuccess?.();
     }
-  }, [wrap.isSuccess, step, wrap.hash, refetchBalance]);
+  }, [wrap.isSuccess, step, wrap.hash, refetchBalance, onSuccess]);
 
   const balanceFormatted = usdcBalance !== undefined ? formatUsdc(usdcBalance) : null;
   const amountBigint = amount ? BigInt(Math.round(parseFloat(amount) * 1_000_000)) : 0n;
