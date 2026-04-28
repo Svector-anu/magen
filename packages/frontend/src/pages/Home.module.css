@@ -79,7 +79,7 @@
   flex-direction: column;
   gap: 48px;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* ── hero ── */
@@ -97,6 +97,7 @@
   line-height: 1.06;
   letter-spacing: -0.03em;
   color: var(--text);
+  -webkit-text-fill-color: var(--text);
   animation: fadeUp 0.5s ease both;
 }
 
