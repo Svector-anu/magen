@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { useAccount } from "wagmi";
 import styles from "./NotificationBanner.module.css";
 import { OPT_IN_KEY } from "./EmailOptInModal.js";
@@ -11,7 +12,8 @@ interface Props {
 }
 
 export function NotificationBanner({ onEnable, forceHide }: Props) {
-  const { address, isConnected } = useAccount();
+  const { authenticated } = usePrivy();
+  const { address } = useAccount();
 
   const [optedIn, setOptedIn] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -25,7 +27,7 @@ export function NotificationBanner({ onEnable, forceHide }: Props) {
   }, [address]);
 
   useEffect(() => {
-    if (!isConnected || optedIn || forceHide || sessionDismissed) {
+    if (!authenticated || optedIn || forceHide || sessionDismissed) {
       setVisible(false);
       setClosing(false);
       return;
@@ -34,7 +36,7 @@ export function NotificationBanner({ onEnable, forceHide }: Props) {
     return () => {
       clearTimeout(t);
     };
-  }, [isConnected, address, optedIn, forceHide, sessionDismissed]);
+  }, [authenticated, address, optedIn, forceHide, sessionDismissed]);
 
   useEffect(() => {
     if (!visible) return;

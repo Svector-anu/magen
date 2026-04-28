@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useConfidentialBalance, useUnwrap } from "../hooks/useUnwrap.js";
 import { formatUsdc } from "../hooks/useWrapUsdc.js";
+import { WrongChainBanner } from "./WrongChainBanner.js";
 import styles from "./UnwrapModal.module.css";
 
 type Step =
@@ -29,7 +30,7 @@ export function UnwrapModal({ onClose }: Props) {
   const { data: balanceHandle, isLoading: isBalanceLoading } = useConfidentialBalance(address);
 
   const {
-    decryptBalance, decryptedBalance, decrypting, decryptError,
+    decryptBalance, decryptedBalance, decryptedZero, decrypting, decryptError,
     startUnwrap, isUnwrapPending, isUnwrapConfirming, isUnwrapConfirmed, unwrapWriteError, parseRequestId,
     finalizeUnwrap, proofPending, proofError,
     isFinalizePending, isFinalizeConfirming, isFinalizeConfirmed, finalizeHash, finalizeWriteError,
@@ -53,6 +54,10 @@ export function UnwrapModal({ onClose }: Props) {
       setStep("error");
     }
   }, [decryptError]);
+
+  useEffect(() => {
+    if (decryptedZero && step === "decrypting") setStep("no-balance");
+  }, [decryptedZero, step]);
 
   useEffect(() => {
     if (decryptedBalance !== null && step === "decrypting") setStep("ready");
@@ -130,6 +135,7 @@ export function UnwrapModal({ onClose }: Props) {
         </div>
 
         <div className={styles.body}>
+          <WrongChainBanner />
           {step === "done" ? (
             <div className={styles.doneBlock}>
               <div className={styles.doneIcon}>✓</div>
@@ -210,7 +216,7 @@ export function UnwrapModal({ onClose }: Props) {
               )}
               {step === "proof-pending" && (
                 <div className={styles.statusMsg}>
-                  <Spinner /> requesting decryption proof from the TEE — this may take a moment…
+                  <Spinner /> waiting for TEE to process the unwrap — polling every 5s, may take up to 1 minute…
                 </div>
               )}
               {step === "finalizing" && (

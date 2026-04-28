@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useConnectorClient, useSwitchChain } from "wagmi";
+import { useWallets } from "@privy-io/react-auth";
 import { BrowserProvider, type Eip1193Provider } from "ethers";
 import { IExecDataProtector } from "@iexec/dataprotector";
 import styles from "./EmailOptInModal.module.css";
@@ -23,61 +23,47 @@ export function EmailOptInModal({ onClose, onOptedIn }: Props) {
   const [stage, setStage] = useState<Stage>("input");
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const { data: connectorClient } = useConnectorClient();
-  const { switchChainAsync } = useSwitchChain();
+  const { wallets } = useWallets();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || stage !== "input") return;
 
-    if (!connectorClient) {
+    const wallet = wallets[0];
+    if (!wallet) {
       setStage("error");
-      setErrorMsg("Wallet not connected. Please connect your wallet and try again.");
+      setErrorMsg("No wallet found. Sign in first and try again.");
       return;
     }
 
     try {
-      // Use the wagmi connector (MetaMask) as the provider — bypasses Phantom / other window.ethereum hijackers
-      const connectorProvider: Eip1193Provider = {
-        request: (args: { method: string; params?: unknown[] | Record<string, unknown> }) =>
-          connectorClient.request(args as Parameters<typeof connectorClient.request>[0]),
-      };
-
-      const makeProvider = () => new BrowserProvider(connectorProvider);
+      const eip1193 = await wallet.getEthereumProvider() as Eip1193Provider;
+      const makeProvider = () => new BrowserProvider(eip1193);
 
       let readyProvider = makeProvider();
       const { chainId: liveChainId } = await readyProvider.getNetwork();
 
       if (Number(liveChainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
         setStage("protecting");
-        setStatusMsg("Switching to Arbitrum Sepolia — confirm in MetaMask…");
-
-        // Try wagmi's switchChain first; if it fails (MetaMask may return -32603 for
-        // unknown chains instead of the standard 4902), fall back to wallet_addEthereumChain
-        // which both adds and switches in one prompt.
+        setStatusMsg("Switching to Arbitrum Sepolia…");
         try {
-          await switchChainAsync({ chainId: ARBITRUM_SEPOLIA_CHAIN_ID });
+          await wallet.switchChain(ARBITRUM_SEPOLIA_CHAIN_ID);
         } catch {
-          await connectorProvider.request({
+          await eip1193.request({
             method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: "0x66eee",
-                chainName: "Arbitrum Sepolia",
-                nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
-                rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
-                blockExplorerUrls: ["https://sepolia.arbiscan.io"],
-              },
-            ],
+            params: [{
+              chainId: "0x66eee",
+              chainName: "Arbitrum Sepolia",
+              nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
+              rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+              blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+            }],
           });
         }
-
         readyProvider = makeProvider();
         const { chainId: afterSwitch } = await readyProvider.getNetwork();
         if (Number(afterSwitch) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-          throw new Error(
-            "Chain switch did not complete. Please manually switch to Arbitrum Sepolia in MetaMask and try again."
-          );
+          throw new Error("Chain switch did not complete. Please switch to Arbitrum Sepolia manually and try again.");
         }
       }
 

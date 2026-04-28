@@ -597,3 +597,86 @@
   color: var(--red);
   background: rgba(220, 38, 38, 0.05);
 }
+
+/* ── Recipient confirmation & unresolved panels ── */
+.confirmPanel {
+  background: rgba(47, 129, 247, 0.08);
+  border: 1px solid rgba(47, 129, 247, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 0 0 1px rgba(47, 129, 247, 0.06), 0 4px 20px rgba(47, 129, 247, 0.08);
+}
+
+.confirmHeader {
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: rgba(15, 15, 30, 0.75);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirmIcon {
+  color: #2f81f7;
+}
+
+.confirmRecipient {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.confirmName {
+  font-size: 15px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.confirmArrow {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+.confirmWallet {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.sourceTag {
+  font-size: 10px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: #3fb950;
+  background: rgba(63, 185, 80, 0.08);
+  border: 1px solid rgba(63, 185, 80, 0.2);
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+}
+
+.confirmBody {
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: rgba(15, 15, 30, 0.6);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+

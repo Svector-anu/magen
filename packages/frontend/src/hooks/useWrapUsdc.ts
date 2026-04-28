@@ -32,6 +32,8 @@ export function useApproveUsdc() {
 
   function approve(amountUsdc: string) {
     if (!USDC_ADDRESS || !WRAPPED_USDC_ADDRESS) return;
+    const [, frac = ""] = amountUsdc.split(".");
+    if (frac.length > USDC_DECIMALS) throw new Error(`USDC has ${USDC_DECIMALS} decimal places — got ${frac.length}`);
     const amount = parseUnits(amountUsdc, USDC_DECIMALS);
     const maxFeePerGas = feeData?.maxFeePerGas ? feeData.maxFeePerGas * 2n : undefined;
     writeContract({
@@ -54,6 +56,8 @@ export function useWrap() {
 
   function wrap(to: `0x${string}`, amountUsdc: string) {
     if (!WRAPPED_USDC_ADDRESS) return;
+    const [, frac = ""] = amountUsdc.split(".");
+    if (frac.length > USDC_DECIMALS) throw new Error(`USDC has ${USDC_DECIMALS} decimal places — got ${frac.length}`);
     const amount = parseUnits(amountUsdc, USDC_DECIMALS);
     const maxFeePerGas = feeData?.maxFeePerGas ? feeData.maxFeePerGas * 2n : undefined;
     writeContract({

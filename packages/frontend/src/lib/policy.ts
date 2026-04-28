@@ -1,7 +1,12 @@
 import type { DisbursementPolicy } from "@magen/shared";
 
 export function computeDeadline(policy: DisbursementPolicy): number {
-  if (policy.approval_mode === "approve-for-period" && policy.approval_period_end) {
+  if (policy.approval_mode === "approve-for-period") {
+    if (!policy.approval_period_end) {
+      throw new Error(
+        "approve-for-period requires approval_period_end — policy is missing an end date"
+      );
+    }
     return Math.floor(new Date(policy.approval_period_end).getTime() / 1000);
   }
   if (policy.approval_mode === "continue-until-revoked") {

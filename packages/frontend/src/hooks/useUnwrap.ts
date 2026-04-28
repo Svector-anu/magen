@@ -24,6 +24,7 @@ export function useUnwrap() {
   walletClientRef.current = walletClient;
 
   const [decryptedBalance, setDecryptedBalance] = useState<bigint | null>(null);
+  const [decryptedZero, setDecryptedZero] = useState(false);
   const [decrypting, setDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState<string | null>(null);
 
@@ -62,9 +63,14 @@ export function useUnwrap() {
     if (!wc) return;
     setDecrypting(true);
     setDecryptError(null);
+    setDecryptedZero(false);
     try {
       const client = await createViemHandleClient(wc);
       const { value } = await client.decrypt(handle as Handle<"uint256">);
+      if ((value as bigint) === 0n) {
+        setDecryptedZero(true);
+        return;
+      }
       setDecryptedBalance(value as bigint);
     } catch (e) {
       setDecryptError(e instanceof Error ? e.message : "Balance decryption failed");
@@ -95,7 +101,9 @@ export function useUnwrap() {
       if (logs.length > 0) {
         return (logs[0].args as { amount: `0x${string}` }).amount;
       }
-    } catch { /* */ }
+    } catch (e) {
+      console.error("[parseRequestId] UnwrapRequested log parse failed:", e);
+    }
     return null;
   }, [unwrapReceipt]);
 
@@ -106,12 +114,35 @@ export function useUnwrap() {
     setProofError(null);
     try {
       const client = await createViemHandleClient(wc);
-      const { decryptionProof } = await client.publicDecrypt(requestId as Handle<"uint256">);
+
+      // The TEE gateway needs time to index the UnwrapRequested event before
+      // it can provide a public decryption proof. Retry with backoff.
+      const MAX_POLL = 12;
+      const POLL_DELAY_MS = 5_000;
+      let decryptionProof: `0x${string}` | undefined;
+      for (let attempt = 0; attempt < MAX_POLL; attempt++) {
+        if (attempt > 0) {
+          await new Promise<void>((r) => setTimeout(r, POLL_DELAY_MS));
+        }
+        try {
+          const result = await client.publicDecrypt(requestId as Handle<"uint256">);
+          decryptionProof = result.decryptionProof as `0x${string}`;
+          break;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          const notReady =
+            msg.includes("does not exist") ||
+            msg.includes("not publicly decryptable") ||
+            msg.includes("not found");
+          if (!notReady || attempt === MAX_POLL - 1) throw e;
+        }
+      }
+
       writeFinalize({
         address: WRAPPED_USDC_ADDRESS,
         abi: WRAPPED_USDC_ABI,
         functionName: "finalizeUnwrap",
-        args: [requestId, decryptionProof as `0x${string}`],
+        args: [requestId, decryptionProof!],
         chainId: arbitrumSepolia.id,
       });
     } catch (e) {
@@ -125,6 +156,7 @@ export function useUnwrap() {
     resetUnwrap();
     resetFinalize();
     setDecryptedBalance(null);
+    setDecryptedZero(false);
     setDecryptError(null);
     setProofError(null);
   }, [resetUnwrap, resetFinalize]);
@@ -133,6 +165,7 @@ export function useUnwrap() {
     // balance decryption
     decryptBalance,
     decryptedBalance,
+    decryptedZero,
     decrypting,
     decryptError,
     // unwrap tx

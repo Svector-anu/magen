@@ -2,9 +2,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { api, walletMessage, currentMinute } from "../lib/api.js";
 import { getCached, getOrSign, invalidate } from "../lib/walletAuth.js";
-import type { ParseErrorResponse } from "../lib/api.js";
+import type { ParseErrorResponse, RecipientResolutionSource } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { ApproveModal } from "../components/ApproveModal.js";
+import { EcosystemSection } from "../components/EcosystemSection.js";
+import { OnboardingChecklist } from "../components/OnboardingChecklist.js";
 import styles from "./Home.module.css";
 
 const PLACEHOLDERS = [
@@ -45,7 +47,16 @@ const DEMO: PolicyCardData = {
   id: "demo",
 };
 
-type Stage = "idle" | "parsing" | "resolved" | "error";
+type Stage = "idle" | "parsing" | "confirming" | "resolved" | "unresolved" | "error";
+
+const SOURCE_LABEL: Record<string, string> = {
+  contact: "saved contacts",
+  ens: "ENS",
+  farcaster: "Farcaster",
+  farcaster_x: "X / Farcaster",
+  address_only: "direct address",
+  direct: "typed in instruction",
+};
 
 function fmtNextDate(iso: string): string {
   const d = new Date(iso);
@@ -77,6 +88,9 @@ export function Home() {
   const [approveOpen, setApproveOpen] = useState(false);
   const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [resolutionSource, setResolutionSource] = useState<RecipientResolutionSource>(null);
+  const [unresolvedName, setUnresolvedName] = useState<string>("");
 
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -145,15 +159,17 @@ export function Home() {
       const res = await api.parseInstruction(instruction);
       setPolicy(res.policy);
       setEnrichment(res.enrichment);
-      setStage("resolved");
+      setResolutionSource(res.recipientResolutionSource);
+      setStage("confirming");
     } catch (err: unknown) {
       const data = (err as { data?: ParseErrorResponse }).data;
       if (data?.error === "recipient_unresolved") {
-        setErrors(["Recipient not found. Try their Farcaster username, ENS name (e.g. name.eth), or paste their wallet address directly."]);
+        setUnresolvedName(data.recipientDisplayName ?? "");
+        setStage("unresolved");
       } else {
         setErrors(data?.validationErrors ?? ["Unexpected error"]);
+        setStage("error");
       }
-      setStage("error");
     }
   }
 
@@ -162,6 +178,8 @@ export function Home() {
     setPolicy(null);
     setErrors([]);
     setInstruction("");
+    setResolutionSource(null);
+    setUnresolvedName("");
     setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
@@ -178,10 +196,11 @@ export function Home() {
   }
 
   const canParse = instruction.trim().length > 0 && stage !== "parsing";
-  const isDemo = stage !== "resolved";
-  const previewData: PolicyCardData = stage === "resolved" && policy ? policy : DEMO;
+  const isDemo = stage !== "resolved" && stage !== "confirming";
+  const previewData: PolicyCardData = (stage === "resolved" || stage === "confirming") && policy ? policy : DEMO;
 
   return (
+    <>
     <div className={styles.page}>
       <div className={styles.container}>
         <section className={styles.hero}>
@@ -193,6 +212,8 @@ export function Home() {
             {subText}<span className={styles.subCursor} />
           </p>
         </section>
+
+        <OnboardingChecklist />
 
         <div className={styles.commandSection}>
           <div className={styles.inputWrap}>
@@ -219,7 +240,7 @@ export function Home() {
 
           <div className={styles.actions}>
             <div className={styles.actionsLeft}>
-              {stage === "resolved" ? (
+              {stage === "resolved" || stage === "confirming" ? (
                 <button className={styles.btnGhost} onClick={handleReset}>
                   ← start over
                 </button>
@@ -249,6 +270,58 @@ export function Home() {
               </div>
             )}
           </div>
+
+          {/* Unresolved recipient panel */}
+          {stage === "unresolved" && (
+            <div className={styles.confirmPanel}>
+              <div className={styles.confirmHeader}>
+                recipient not found
+              </div>
+              <p className={styles.confirmBody}>
+                {unresolvedName
+                  ? <>Couldn't find <strong>{unresolvedName}</strong> in contacts, ENS, or Farcaster. Add them to contacts first, or try a full wallet address.</>
+                  : <>Couldn't resolve the recipient. Try a different name or a full wallet address.</>}
+              </p>
+              <div className={styles.confirmActions}>
+                <button className={styles.btnGhost} onClick={handleReset}>← try again</button>
+              </div>
+            </div>
+          )}
+
+          {/* Recipient confirmation panel */}
+          {stage === "confirming" && policy && (
+            <div className={styles.confirmPanel}>
+              <div className={styles.confirmHeader}>
+                <span className={styles.confirmIcon}>✦</span>
+                confirm recipient
+              </div>
+              <div className={styles.confirmRecipient}>
+                <span className={styles.confirmName}>{policy.recipient_display_name}</span>
+                <span className={styles.confirmArrow}>→</span>
+                <span className={styles.confirmWallet}>
+                  {policy.recipient_wallet.slice(0, 10)}…{policy.recipient_wallet.slice(-8)}
+                </span>
+                {resolutionSource && resolutionSource !== "direct" && (
+                  <span className={styles.sourceTag}>via {SOURCE_LABEL[resolutionSource] ?? resolutionSource}</span>
+                )}
+              </div>
+              <p className={styles.confirmBody}>
+                Is this the correct wallet for{" "}
+                <strong>{policy.recipient_display_name}</strong>?
+              </p>
+              <div className={styles.confirmActions}>
+                <button className={styles.btnGhost} onClick={handleReset}>
+                  wrong address
+                </button>
+                <button
+                  className={styles.btnPrimary}
+                  onClick={() => setStage("resolved")}
+                >
+                  confirmed ▸
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {approveOpen && policy && (
@@ -269,16 +342,18 @@ export function Home() {
               <span className={`${styles.dot} ${styles.dotGreen}`} />
             </div>
             <div className={styles.chromeUrl}>
-              {isDemo
-                ? "magen://policy/preview"
-                : `magen://policy/${(previewData.id ?? "").slice(0, 8)}`}
+              {stage === "resolved"
+                ? `magen://policy/${(previewData.id ?? "").slice(0, 8)}`
+                : stage === "confirming"
+                ? "magen://policy/ready"
+                : "magen://policy/example"}
             </div>
-            {isDemo && <span className={styles.demoTag}>DEMO</span>}
           </div>
 
           <PolicyCard
             data={previewData}
             isDemo={isDemo}
+            confirming={stage === "confirming"}
             enrichment={enrichment}
             onApprove={() => setApproveOpen(true)}
           />
@@ -316,17 +391,21 @@ export function Home() {
         )}
       </div>
     </div>
+    <EcosystemSection />
+    </>
   );
 }
 
 function PolicyCard({
   data,
   isDemo,
+  confirming,
   enrichment,
   onApprove,
 }: {
   data: PolicyCardData;
   isDemo: boolean;
+  confirming?: boolean;
   enrichment?: { onChainContext?: string };
   onApprove?: () => void;
 }) {
@@ -403,11 +482,15 @@ function PolicyCard({
 
       <div className={styles.previewActions}>
         <button
-          className={`${styles.btnApprove} ${isDemo ? styles.btnApproveDemo : ""}`}
-          disabled={isDemo}
-          onClick={!isDemo ? onApprove : undefined}
+          className={`${styles.btnApprove} ${isDemo || confirming ? styles.btnApproveDemo : ""}`}
+          disabled={isDemo || confirming}
+          onClick={!isDemo && !confirming ? onApprove : undefined}
         >
-          {isDemo ? "describe a payment above to continue" : "approve & schedule ▸"}
+          {isDemo
+            ? "describe a payment above to continue"
+            : confirming
+            ? "confirm the recipient above first"
+            : "approve & schedule ▸"}
         </button>
         <span className={styles.policyId}>
           id: {isDemo ? "demo" : (data.id ?? "").slice(0, 8)}

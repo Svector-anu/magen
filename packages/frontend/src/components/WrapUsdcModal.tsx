@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useUsdcBalance, useUsdcAllowance, useApproveUsdc, useWrap, formatUsdc } from "../hooks/useWrapUsdc.js";
+import { WrongChainBanner } from "./WrongChainBanner.js";
 import styles from "./WrapUsdcModal.module.css";
 
 interface Props {
@@ -79,6 +80,7 @@ export function WrapUsdcModal({ onClose }: Props) {
         </div>
 
         <div className={styles.body}>
+          <WrongChainBanner />
           {step === "done" ? (
             <div className={styles.doneBlock}>
               <div className={styles.doneIcon}>✓</div>

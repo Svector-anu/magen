@@ -85,10 +85,13 @@ export interface DashboardPolicy {
   recipient_wallet: string;
   amount_usdc: string;
   frequency: string;
+  approval_mode: string;
   status: string;
   next_execution_at: string;
   last_executed_at: string | null;
   created_at: string;
+  last_error: string | null;
+  last_job_status: string | null;
 }
 
 export interface DashboardJob {
@@ -115,15 +118,26 @@ export interface DashboardData {
   recent_jobs: DashboardJob[];
 }
 
+export type RecipientResolutionSource =
+  | "direct"
+  | "contact"
+  | "ens"
+  | "farcaster"
+  | "farcaster_x"
+  | "address_only"
+  | null;
+
 export interface ParseResponse {
   policy: DisbursementPolicy;
   enrichment: { onChainContext?: string };
+  recipientResolutionSource: RecipientResolutionSource;
 }
 
 export interface ParseErrorResponse {
   error: string;
   validationErrors: string[];
   enrichment: object;
+  recipientDisplayName?: string;
 }
 
 export interface ResolveResult {
@@ -169,6 +183,9 @@ export const api = {
 
   resumePolicy: (id: string, address: string, sig: string, minute: number) =>
     postWithWallet<{ jobId: string }>(`/policies/${id}/resume`, {}, address, sig, minute),
+
+  triggerPolicy: (id: string, address: string, sig: string, minute: number) =>
+    postWithWallet<{ jobId: string }>(`/policies/${id}/trigger`, {}, address, sig, minute),
 
   getJobStatus: (jobId: string) =>
     get<{ id: string; status: string; txHash?: string; error?: string }>(`/jobs/${jobId}`),

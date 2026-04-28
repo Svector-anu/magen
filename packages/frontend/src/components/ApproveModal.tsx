@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useSignMessage } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { walletMessage, currentMinute } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { CONTRACTS_READY, VAULT_ADDRESS } from "../lib/contracts.js";
 import { useSetOperator, useIsOperator, computeDeadline, deadlineLabel } from "../hooks/useApprove.js";
+import { useUsdcBalance, formatUsdc } from "../hooks/useWrapUsdc.js";
 import { api } from "../lib/api.js";
+import { WrongChainBanner } from "./WrongChainBanner.js";
+import { WrapUsdcModal } from "./WrapUsdcModal.js";
 import styles from "./ApproveModal.module.css";
 
 interface Props {
@@ -14,8 +17,8 @@ interface Props {
 }
 
 export function ApproveModal({ policy, onClose }: Props) {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { authenticated, login } = usePrivy();
+  const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { data: alreadyOperator, isLoading: checkingOperator } = useIsOperator(address);
   const { setOperator, hash, isPending, isConfirming, isSuccess, error, reset } = useSetOperator();
@@ -25,10 +28,14 @@ export function ApproveModal({ policy, onClose }: Props) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [awaitingSignature, setAwaitingSignature] = useState(false);
 
-  // ask-every-time: no setOperator needed, skip straight to save
   const [readyToSave, setReadyToSave] = useState(false);
-  // continue-until-revoked: require double-confirm before setOperator
   const [revokeWarning, setRevokeWarning] = useState(false);
+  const [auditorConfirmed, setAuditorConfirmed] = useState(false);
+  const [showWrap, setShowWrap] = useState(false);
+
+  const { data: usdcBalance } = useUsdcBalance(address);
+
+  const hasAuditor = !!policy.auditor_wallet;
 
   const isAskEveryTime = policy.approval_mode === "ask-every-time";
   const isContinueUntilRevoked = policy.approval_mode === "continue-until-revoked";
@@ -95,7 +102,14 @@ export function ApproveModal({ policy, onClose }: Props) {
       setRevokeWarning(true);
       return;
     }
-    setOperator(computeDeadline(policy));
+    let deadline: number;
+    try {
+      deadline = computeDeadline(policy);
+    } catch (e) {
+      setExecError(e instanceof Error ? e.message : "Invalid policy deadline");
+      return;
+    }
+    setOperator(deadline);
   }
 
   const deadline = deadlineLabel(policy);
@@ -107,6 +121,8 @@ export function ApproveModal({ policy, onClose }: Props) {
     : !isSuccess ? 1 : !jobId ? 2 : !execTxHash ? 3 : 3;
 
   return (
+    <>
+    {showWrap && <WrapUsdcModal onClose={() => setShowWrap(false)} />}
     <div className={styles.backdrop} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.modalHeader}>
@@ -115,6 +131,7 @@ export function ApproveModal({ policy, onClose }: Props) {
         </div>
 
         <div className={styles.modalBody}>
+          <WrongChainBanner />
           {!CONTRACTS_READY && (
             <div className={styles.notice}>
               <span className={styles.noticeIcon}>⚠</span>
@@ -198,56 +215,104 @@ export function ApproveModal({ policy, onClose }: Props) {
             )}
           </div>
 
-          {/* continue-until-revoked: warning before step 1 */}
-          {isContinueUntilRevoked && revokeWarning && !isSuccess && (
-            <div className={styles.notice}>
+          {isContinueUntilRevoked && !isSuccess && (
+            <div className={`${styles.notice} ${revokeWarning ? styles.noticeWarn : ""}`}>
               <span className={styles.noticeIcon}>⚠</span>
               <div>
-                <div className={styles.noticeTitle}>indefinite authorization</div>
+                <div className={styles.noticeTitle}>
+                  {revokeWarning ? "confirm indefinite authorization" : "runs until you revoke"}
+                </div>
                 <div className={styles.noticeText}>
-                  Magen will execute payments automatically with no expiry.
-                  You must actively revoke this from your dashboard to stop it.
-                  This cannot be undone automatically.
+                  {revokeWarning
+                    ? "Magen will execute payments automatically with no expiry. You must actively revoke this from your dashboard to stop it."
+                    : "Payments will continue indefinitely. Revoke anytime from your dashboard."}
                 </div>
               </div>
             </div>
           )}
 
-          <div className={styles.authBlock}>
-            <div className={styles.authExplain}>
-              {isAskEveryTime && !readyToSave
-                ? "No on-chain authorization needed. You'll receive a notification each cycle and sign to approve that payment manually."
-                : isAskEveryTime && readyToSave && awaitingSignature
-                ? "Sign to save your schedule. Free off-chain signature — no gas."
-                : isAskEveryTime && jobId
-                ? "Schedule saved. You'll be notified when the first payment is ready for your approval."
-                : !isSuccess
-                ? isContinueUntilRevoked && revokeWarning
-                  ? "Confirm below to grant indefinite authorization. You can revoke from your dashboard at any time."
-                  : "Step 1 grants Magen permission to send USDC from your wallet on schedule. Your balance stays private — only the scheduled amount moves each time. You can revoke this at any time."
-                : awaitingSignature
-                ? "Step 2 — sign to save your payment schedule. Free off-chain signature, no gas."
-                : jobId && !execTxHash
-                ? "Schedule saved. Processing your first payment privately on-chain…"
-                : execTxHash
-                ? "All done. Your payment schedule is live."
-                : "Authorizing…"}
-            </div>
-            {!isSuccess && !isAskEveryTime && (
-              <div className={styles.authDetails}>
-                <div className={styles.authRow}>
-                  <span className={styles.authKey}>privacy</span>
-                  <span className={styles.authVal}>amount hidden on-chain by default</span>
+          {isAskEveryTime && !readyToSave && (
+            <div className={styles.notice}>
+              <span className={styles.noticeIcon}>ℹ</span>
+              <div>
+                <div className={styles.noticeTitle}>you approve each payment</div>
+                <div className={styles.noticeText}>
+                  Each cycle you'll get a notification and must sign to release the payment. If you don't approve, that cycle is skipped.
                 </div>
-                {alreadyOperator && !checkingOperator && (
-                  <div className={styles.authRow}>
-                    <span className={styles.authKey}>status</span>
-                    <span className={styles.green}>already authorized — signing again extends it</span>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {hasAuditor && !isAllDone && (
+            <div className={styles.auditorBlock}>
+              <div className={styles.auditorHeader}>
+                <span className={styles.auditorIcon}>⚠</span>
+                <span className={styles.auditorTitle}>permanent auditor access</span>
+              </div>
+              <div className={styles.auditorBody}>
+                Granting{" "}
+                <code className={styles.auditorAddr}>
+                  {policy.auditor_wallet!.slice(0, 6)}…{policy.auditor_wallet!.slice(-4)}
+                </code>{" "}
+                read access to{" "}
+                <strong>{policy.recipient_display_name}</strong>'s disbursement handle is{" "}
+                <strong>permanent and cannot be revoked</strong>. Future cycle handles will need
+                separate grants.
+              </div>
+              <label className={styles.auditorCheck}>
+                <input
+                  type="checkbox"
+                  checked={auditorConfirmed}
+                  onChange={(e) => setAuditorConfirmed(e.target.checked)}
+                />
+                <span>I understand this disclosure is irreversible</span>
+              </label>
+            </div>
+          )}
+
+          {!isAllDone && usdcBalance !== undefined && (
+            <div className={styles.fundingBlock}>
+              <div className={styles.fundingLeft}>
+                <span className={styles.fundingLabel}>your usdc balance</span>
+                <span className={`${styles.fundingVal} ${usdcBalance === 0n ? styles.fundingValZero : ""}`}>
+                  {usdcBalance > 0n ? `${formatUsdc(usdcBalance)} USDC` : "0 — not funded yet"}
+                </span>
+              </div>
+              {usdcBalance > 0n ? (
+                <button className={styles.btnWrap} onClick={() => setShowWrap(true)}>
+                  wrap USDC →
+                </button>
+              ) : (
+                <a
+                  className={styles.faucetLink}
+                  href="https://faucet.circle.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  get USDC ↗
+                </a>
+              )}
+            </div>
+          )}
+
+          {!isSuccess && !isAskEveryTime && (
+            <div className={styles.authBlock}>
+              <div className={styles.authRow}>
+                <span className={styles.authKey}>privacy</span>
+                <span className={styles.authVal}>amount encrypted end-to-end — hidden on-chain by default</span>
+              </div>
+              <div className={styles.authRow}>
+                <span className={styles.authKey}>custody</span>
+                <span className={styles.authVal}>only the scheduled amount moves — your balance stays yours</span>
+              </div>
+              {alreadyOperator && !checkingOperator && (
+                <div className={styles.authRow}>
+                  <span className={styles.authKey}>status</span>
+                  <span className={styles.green}>already authorized — signing again extends it</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Step 1 tx confirmed (period / revoked modes) */}
           {isSuccess && hash && (
@@ -355,7 +420,10 @@ export function ApproveModal({ policy, onClose }: Props) {
           {execError && (
             <div className={styles.errorBlock}>
               <span className={styles.errorIcon}>✕</span>
-              <span className={styles.errorText}>something went wrong. retrying automatically.</span>
+              <span className={styles.errorText}>
+                Payment execution failed — check your dashboard and use "send now" to retry.
+                {execError.length < 200 ? ` (${execError})` : ""}
+              </span>
             </div>
           )}
 
@@ -374,9 +442,13 @@ export function ApproveModal({ policy, onClose }: Props) {
             <button className={styles.btnDone} onClick={onClose}>
               done ✓
             </button>
-          ) : !isConnected ? (
-            <button className={styles.btnPrimary} onClick={openConnectModal}>
-              connect wallet to continue
+          ) : execError ? (
+            <button className={styles.btnDone} onClick={onClose}>
+              close — check dashboard
+            </button>
+          ) : !authenticated ? (
+            <button className={styles.btnPrimary} onClick={login}>
+              sign in to continue
             </button>
           ) : isSuccess || (isAskEveryTime && readyToSave) ? (
             <button className={styles.btnPrimary} disabled>
@@ -390,7 +462,7 @@ export function ApproveModal({ policy, onClose }: Props) {
               <button
                 className={styles.btnPrimary}
                 onClick={error ? () => { reset(); handleApprove(); } : handleApprove}
-                disabled={!CONTRACTS_READY || isPending || isConfirming || checkingOperator}
+                disabled={!CONTRACTS_READY || isPending || isConfirming || checkingOperator || (hasAuditor && !auditorConfirmed)}
               >
                 {isPending
                   ? "confirm in wallet…"
@@ -405,5 +477,6 @@ export function ApproveModal({ policy, onClose }: Props) {
         </div>
       </div>
     </div>
+    </>
   );
 }
