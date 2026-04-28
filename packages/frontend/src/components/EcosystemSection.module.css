@@ -126,22 +126,39 @@
 @media (max-width: 768px) {
   .section { min-height: 320vh; }
 
-  /* 100svh = small viewport height — stays stable as mobile browser chrome
-     shows/hides, so the sticky frame never shifts and text stays truly centered */
+  /* 100svh stays stable as mobile browser chrome shows/hides */
   .sticky {
-    height: 100vh;     /* fallback for older browsers */
+    height: 100vh;
     height: 100svh;
   }
 
-  /* hide all floating icons — they overlap text at mobile viewport widths */
-  .icon { display: none !important; }
+  /* static icons — no drift, no scatter animation */
+  .icon {
+    width: 48px !important;
+    height: 48px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* upper pair — pull to far edges so they don't clip text */
+  .icon:nth-child(2) { left: 6% !important; }   /* arbitrum */
+  .icon:nth-child(3) { left: 86% !important; }  /* iexec */
+
+  /* middle pair originally at top:48% — drop them below the text zone */
+  .icon:nth-child(4) { top: 68% !important; left: 6% !important; }  /* farcaster */
+  .icon:nth-child(5) { top: 68% !important; left: 86% !important; } /* ens */
+
+  /* bottom pair — compress slightly so nothing falls off screen */
+  .icon:nth-child(6) { top: 82% !important; left: 20% !important; } /* privy */
+  .icon:nth-child(7) { top: 82% !important; left: 72% !important; } /* coinbase */
 
   .center {
-    padding: 72px 28px 40px; /* top: clear fixed header (64px) + breathing room */
+    padding: 72px 28px 40px;
     gap: 6px;
   }
 
-  /* scale text down slightly so lines don't wrap awkwardly */
   .line:nth-child(1) { font-size: clamp(12px, 3.2vw, 16px); }
   .line:nth-child(2) { font-size: clamp(16px, 4.5vw, 24px); }
   .line:nth-child(3) { font-size: clamp(20px, 5.5vw, 30px); }
