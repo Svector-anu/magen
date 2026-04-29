@@ -85,7 +85,7 @@ export async function listActivePolicies(ownerWallet: string): Promise<StoredPol
 export async function cancelPolicy(id: string, ownerWallet: string): Promise<boolean> {
   const result = await sql`
     UPDATE policies SET status = 'cancelled'
-    WHERE id = ${id} AND owner_wallet = ${ownerWallet} AND status = 'active'
+    WHERE id = ${id} AND owner_wallet = ${ownerWallet} AND status IN ('active', 'paused')
   `;
   return result.count > 0;
 }

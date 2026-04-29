@@ -206,6 +206,7 @@ export function Dashboard() {
   const [wrapOpen, setWrapOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [resuming, setResuming] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const [revokeConfirm, setRevokeConfirm] = useState(false);
@@ -276,6 +277,20 @@ export function Dashboard() {
       setTimeout(() => setTriggerError(null), 8_000);
     } finally {
       setTriggering(null);
+    }
+  }, [address, load]);
+
+  const handleCancel = useCallback(async (policyId: string) => {
+    if (!address) return;
+    setCancelling(policyId);
+    try {
+      const auth = await getOrSign(address, "cancel-policy", (msg) => signRef.current({ message: msg }));
+      await api.cancelPolicy(policyId, address, auth.sig, auth.minute);
+      await load(true);
+    } catch {
+      // sign rejected or cancel failed
+    } finally {
+      setCancelling(null);
     }
   }, [address, load]);
 
@@ -501,13 +516,22 @@ export function Dashboard() {
                             </button>
                           )}
                           {p.status === "paused" && (
-                            <button
-                              className={styles.retryBtn}
-                              onClick={() => handleResume(p.id)}
-                              disabled={resuming === p.id}
-                            >
-                              {resuming === p.id ? "resuming…" : "↻ resume"}
-                            </button>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <button
+                                className={styles.retryBtn}
+                                onClick={() => handleResume(p.id)}
+                                disabled={resuming === p.id || cancelling === p.id}
+                              >
+                                {resuming === p.id ? "resuming…" : "↻ resume"}
+                              </button>
+                              <button
+                                className={styles.cancelBtn}
+                                onClick={() => handleCancel(p.id)}
+                                disabled={cancelling === p.id || resuming === p.id}
+                              >
+                                {cancelling === p.id ? "cancelling…" : "cancel"}
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
