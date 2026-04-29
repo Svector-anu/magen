@@ -78,3 +78,17 @@ export function formatUsdc(raw: bigint): string {
   const frac = raw % 1_000_000n;
   return `${whole}.${frac.toString().padStart(6, "0").replace(/0+$/, "") || "00"}`;
 }
+
+const ZERO_HANDLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+export function useHasMwUsdc(address: `0x${string}` | undefined) {
+  const result = useReadContract({
+    address: WRAPPED_USDC_ADDRESS ?? undefined,
+    abi: WRAPPED_USDC_ABI,
+    functionName: "confidentialBalanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!WRAPPED_USDC_ADDRESS },
+  });
+  const hasMwUsdc = result.data !== undefined ? (result.data as string) !== ZERO_HANDLE : undefined;
+  return { ...result, data: hasMwUsdc };
+}

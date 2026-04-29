@@ -5,7 +5,7 @@ import { walletMessage, currentMinute } from "../lib/api.js";
 import type { DisbursementPolicy } from "@magen/shared";
 import { CONTRACTS_READY, VAULT_ADDRESS } from "../lib/contracts.js";
 import { useSetOperator, useIsOperator, computeDeadline, deadlineLabel } from "../hooks/useApprove.js";
-import { useUsdcBalance, formatUsdc } from "../hooks/useWrapUsdc.js";
+import { useUsdcBalance, useHasMwUsdc, formatUsdc } from "../hooks/useWrapUsdc.js";
 import { api } from "../lib/api.js";
 import { WrongChainBanner } from "./WrongChainBanner.js";
 import { WrapUsdcModal } from "./WrapUsdcModal.js";
@@ -34,6 +34,7 @@ export function ApproveModal({ policy, onClose }: Props) {
   const [showWrap, setShowWrap] = useState(false);
 
   const { data: usdcBalance } = useUsdcBalance(address);
+  const { data: hasMwUsdc, isLoading: checkingMwUsdc } = useHasMwUsdc(address);
 
   const hasAuditor = !!policy.auditor_wallet;
 
@@ -132,6 +133,27 @@ export function ApproveModal({ policy, onClose }: Props) {
 
         <div className={styles.modalBody}>
           <WrongChainBanner />
+
+          {!isAllDone && !checkingOperator && !checkingMwUsdc && (
+            <div className={styles.preflight}>
+              <div className={styles.preflightTitle}>Before this payment can run:</div>
+              <div className={`${styles.preflightRow} ${alreadyOperator ? styles.preflightOk : styles.preflightPending}`}>
+                <span className={styles.preflightIcon}>{alreadyOperator ? "✓" : "–"}</span>
+                <span>Authorize vault (one-time)</span>
+                {!alreadyOperator && <span className={styles.preflightHint}>step 1 below</span>}
+              </div>
+              <div className={`${styles.preflightRow} ${hasMwUsdc ? styles.preflightOk : styles.preflightPending}`}>
+                <span className={styles.preflightIcon}>{hasMwUsdc ? "✓" : "–"}</span>
+                <span>Wrap USDC → mwUSDC</span>
+                {!hasMwUsdc && (
+                  <button className={styles.preflightBtn} onClick={() => setShowWrap(true)}>
+                    Wrap now →
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {!CONTRACTS_READY && (
             <div className={styles.notice}>
               <span className={styles.noticeIcon}>⚠</span>
@@ -178,6 +200,20 @@ export function ApproveModal({ policy, onClose }: Props) {
                 <span className={styles.stepNum}>{execTxHash ? "✓" : "3"}</span>
                 <span className={styles.stepLabel}>First payment</span>
                 <span className={styles.stepSub}>private · on-chain</span>
+              </div>
+            </div>
+          )}
+
+          {isAskEveryTime && policy.frequency !== "once" && (
+            <div className={styles.notice}>
+              <span className={styles.noticeIcon}>⚠</span>
+              <div>
+                <div className={styles.noticeTitle}>incompatible approval mode</div>
+                <div className={styles.noticeText}>
+                  "Ask every time" skips vault authorization — recurring payments will always fail.
+                  Recreate this policy without a specific approval prompt, e.g.{" "}
+                  <em>pay {policy.recipient_display_name} {policy.amount_usdc} USDC {policy.frequency}</em>.
+                </div>
               </div>
             </div>
           )}
@@ -462,7 +498,7 @@ export function ApproveModal({ policy, onClose }: Props) {
               <button
                 className={styles.btnPrimary}
                 onClick={error ? () => { reset(); handleApprove(); } : handleApprove}
-                disabled={!CONTRACTS_READY || isPending || isConfirming || checkingOperator || (hasAuditor && !auditorConfirmed)}
+                disabled={!CONTRACTS_READY || isPending || isConfirming || checkingOperator || checkingMwUsdc || hasMwUsdc === false || (hasAuditor && !auditorConfirmed)}
               >
                 {isPending
                   ? "confirm in wallet…"

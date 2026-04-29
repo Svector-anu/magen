@@ -79,3 +79,7 @@ services:
         sync: false
       - key: VITE_API_URL
         sync: false
+      - key: VITE_USDC_ADDRESS
+        value: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"
+      - key: VITE_ARBITRUM_SEPOLIA_RPC
+        sync: false

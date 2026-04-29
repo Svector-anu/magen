@@ -24,6 +24,11 @@ RULES:
 - amount_usdc: decimal string with up to 6 decimal places (e.g. "100.50"). USDC has 6 decimals.
 - frequency: ONLY one of: "once", "daily", "weekly", "monthly"
 - approval_mode: ONLY one of: "ask-every-time", "approve-for-period", "continue-until-revoked"
+  For frequency = "once", any mode is valid.
+  For frequency = "daily", "weekly", or "monthly", NEVER use "ask-every-time" — it skips vault
+  authorization and will always fail at execution. For recurring payments: use
+  "continue-until-revoked" when no explicit end date is given, or "approve-for-period" when
+  an explicit end date is given.
 - start_date: ISO 8601 UTC datetime. If not specified, use current time.
 - end_date: ISO 8601 UTC datetime. Only include if explicitly stated.
 - recipient_wallet: must be a valid 0x EVM address (42 hex chars). If the input uses a name/ENS that you cannot resolve to a confirmed wallet, set recipient_wallet to "UNRESOLVED" and recipient_display_name to the name given.

@@ -599,6 +599,73 @@
   .recapVal { text-align: left; }
 }
 
+/* ── pre-flight checklist ── */
+.preflight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.preflightTitle {
+  font-size: 10px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.preflightRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.preflightOk { color: #3fb950; }
+.preflightPending { color: rgba(255, 255, 255, 0.5); }
+
+.preflightIcon {
+  font-size: 11px;
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.preflightOk .preflightIcon { color: #3fb950; }
+.preflightPending .preflightIcon { color: rgba(255, 255, 255, 0.2); }
+
+.preflightHint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.2);
+  margin-left: auto;
+}
+
+.preflightBtn {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #a78bfa;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.preflightBtn:hover {
+  background: rgba(124, 58, 237, 0.2);
+}
+
 /* ── funding check ── */
 .fundingBlock {
   display: flex;

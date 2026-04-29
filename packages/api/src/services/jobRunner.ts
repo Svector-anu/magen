@@ -1,3 +1,4 @@
+import { JsonRpcProvider, Contract } from "ethers";
 import { executePolicy } from "./executePolicy.js";
 import { getJob, updateJob } from "./jobStore.js";
 import { sql } from "./db.js";
@@ -30,7 +31,8 @@ function isPermanentError(err: unknown): boolean {
     msg.includes("INSUFFICIENT_FUNDS") ||
     msg.includes("OperatorNotActive") ||
     msg.includes("UnauthorizedCaller") ||
-    msg.includes("Transaction reverted")
+    msg.includes("Transaction reverted") ||
+    msg.includes("Silent zero transfer")
   );
 }
 
@@ -49,6 +51,25 @@ export async function runJob(jobId: string): Promise<RunJobResult> {
   if (isPaused()) {
     notify({ type: "execution.paused", jobId, policyId: policy.id });
     return { ok: false, error: "Execution paused" };
+  }
+
+  // Pre-flight: check operator before spending gas
+  try {
+    const provider = new JsonRpcProvider(process.env.ARBITRUM_SEPOLIA_RPC);
+    const mwUsdc = new Contract(
+      process.env.WRAPPED_USDC_ADDRESS!,
+      ["function isOperator(address,address) view returns (bool)"],
+      provider,
+    );
+    const isOp = await mwUsdc.isOperator(policy.owner_wallet, policy.vault_address) as boolean;
+    if (!isOp) {
+      const msg = "OperatorNotActive — vault authorization expired. Re-authorize the vault from the dashboard.";
+      await updateJob(jobId, { status: "failed", error: msg });
+      await pausePolicy(policy.id);
+      return { ok: false, error: msg };
+    }
+  } catch {
+    // non-fatal — let the real call surface the error if it fails
   }
 
   const claimed = await sql`

@@ -23,6 +23,16 @@ function formatDate(iso: string): string {
   });
 }
 
+function friendlyError(raw: string): string {
+  if (raw.includes("OperatorNotActive") || raw.includes("0xe356d5aa")) return "Vault not authorized. Please approve access from the home page.";
+  if (raw.includes("Silent zero transfer"))                             return "Insufficient mwUSDC. Please wrap USDC before resuming.";
+  if (raw.includes("UnauthorizedCaller") || raw.includes("0xd86ad9cf")) return "Agent not authorized — contact support.";
+  if (raw.includes("require(false)"))                                   return "Execution failed. Please retry or contact support if the issue persists.";
+  if (raw.includes("INSUFFICIENT_FUNDS"))                               return "Insufficient ETH for gas — top up the API wallet.";
+  if (raw.includes("CALL_EXCEPTION"))                                   return "Execution failed. Please retry.";
+  return "Execution failed. Please retry.";
+}
+
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60_000);
@@ -539,7 +549,7 @@ export function Dashboard() {
                         <tr className={styles.errorRow}>
                           <td colSpan={6} className={styles.errorRowCell}>
                             <span className={styles.errorRowIcon}>✕</span>
-                            {p.last_error.slice(0, 160)}
+                            {friendlyError(p.last_error)}
                           </td>
                         </tr>
                       )}
@@ -577,7 +587,8 @@ export function Dashboard() {
                 </thead>
                 <tbody>
                   {data.recent_jobs.map((j) => (
-                    <tr key={j.id}>
+                    <Fragment key={j.id}>
+                    <tr>
                       <td>
                         <div className={styles.recipientCell}>
                           <div
@@ -626,6 +637,15 @@ export function Dashboard() {
                         )}
                       </td>
                     </tr>
+                    {j.status === "failed" && j.error && (
+                      <tr className={styles.errorRow}>
+                        <td colSpan={7} className={styles.errorRowCell}>
+                          <span className={styles.errorRowIcon}>✕</span>
+                          {friendlyError(j.error)}
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
