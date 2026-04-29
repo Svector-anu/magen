@@ -238,6 +238,15 @@ export function Home() {
 
           <p className={styles.helperText}>describe your payment in plain english</p>
 
+          <div className={styles.useCaseChips}>
+            <span className={styles.chip}>pay people</span>
+            <span className={styles.chip}>contractor payroll</span>
+            <span className={styles.chip}>subscriptions</span>
+            <span className={`${styles.chip} ${styles.chipSoon}`}>
+              fund AI agents <span className={styles.soonTag}>soon</span>
+            </span>
+          </div>
+
           <div className={styles.actions}>
             <div className={styles.actionsLeft}>
               {stage === "resolved" || stage === "confirming" ? (
