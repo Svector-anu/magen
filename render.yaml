@@ -4,20 +4,24 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @magen/shared build && pnpm --filter @magen/api build
-    startCommand: node --experimental-sqlite packages/api/dist/index.js
+    startCommand: node packages/api/dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: API_PORT
         value: "10000"
+      - key: DISBURSEMENT_AGENT_ADDRESS
+        value: "0x42fdD28DF516d8Cc0f0692cF00AF917CbD847E5c"
+      - key: DISBURSEMENT_VAULT_ADDRESS
+        value: "0xfcC96b2bD9E30BDFE941C230873eCEd3f71D6466"
+      - key: WRAPPED_USDC_ADDRESS
+        value: "0x0b6aCacf10fb1Ec0Ac66b9eCe71DB09b11eA2742"
+      - key: USDC_ADDRESS
+        value: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"
       - key: ARBITRUM_SEPOLIA_RPC
         sync: false
       - key: PRIVATE_KEY
-        sync: false
-      - key: DISBURSEMENT_AGENT_ADDRESS
-        sync: false
-      - key: WRAPPED_USDC_ADDRESS
         sync: false
       - key: AGENT_PUBLIC_JWK
         sync: false
@@ -32,6 +36,8 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: DATABASE_URL
+        sync: false
+      - key: NEYNAR_API_KEY
         sync: false
 
   - name: magen-agent

@@ -78,6 +78,9 @@ migrate()
     console.log("[db] migrations applied");
     app.listen(port, () => {
       console.log(`Magen API listening on port ${port}`);
+      console.log(`[runtime] DISBURSEMENT_AGENT_ADDRESS=${process.env.DISBURSEMENT_AGENT_ADDRESS}`);
+      console.log(`[runtime] DISBURSEMENT_VAULT_ADDRESS=${process.env.DISBURSEMENT_VAULT_ADDRESS}`);
+      console.log(`[runtime] WRAPPED_USDC_ADDRESS=${process.env.WRAPPED_USDC_ADDRESS}`);
       void runScheduler();
       setInterval(() => void runScheduler(), SCHEDULER_INTERVAL_MS);
       void runExecutor();
