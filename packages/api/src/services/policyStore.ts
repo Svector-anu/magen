@@ -155,6 +155,7 @@ export async function getDashboardData(ownerWallet: string): Promise<DashboardDa
       (SELECT j.status FROM jobs j WHERE j.policy_id = p.id ORDER BY j.created_at DESC LIMIT 1) AS last_job_status
     FROM policies p
     WHERE p.owner_wallet = ${ownerWallet}
+      AND p.status != 'cancelled'
     ORDER BY p.created_at DESC
   `;
 
