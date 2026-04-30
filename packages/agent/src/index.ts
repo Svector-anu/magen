@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const vestauth = require("vestauth");
 
 const API_BASE = process.env.API_BASE ?? "http://localhost:3001/api";
-const POLL_INTERVAL_MS = 5_000;
+const POLL_INTERVAL_MS = 30_000;
 const AGENT_UID = "magen-agent";
 
 function privateJwk(): string {
