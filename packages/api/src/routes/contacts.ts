@@ -7,15 +7,16 @@ import {
   deleteContact,
 } from "../store/contactStore.js";
 import { resolveIdentifier } from "../services/resolveIdentifier.js";
+import { makeRequireWallet } from "../middleware/requireWallet.js";
 
 export const contactsRouter = Router();
 
-contactsRouter.get("/contacts", async (_req: Request, res: Response) => {
-  res.json(await listContacts());
+contactsRouter.get("/contacts", makeRequireWallet("list-contacts"), async (req: Request, res: Response) => {
+  res.json(await listContacts(req.verifiedWallet!));
 });
 
-contactsRouter.get("/contacts/:id", async (req: Request, res: Response) => {
-  const contact = await getContact(req.params.id);
+contactsRouter.get("/contacts/:id", makeRequireWallet("get-contact"), async (req: Request, res: Response) => {
+  const contact = await getContact(req.params.id, req.verifiedWallet!);
   if (!contact) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -33,7 +34,7 @@ const UpsertSchema = z.object({
   resolution_status: z.enum(["unresolved", "resolved", "confirmed"]).optional(),
 });
 
-contactsRouter.post("/contacts", async (req: Request, res: Response) => {
+contactsRouter.post("/contacts", makeRequireWallet("save-contact"), async (req: Request, res: Response) => {
   const body = UpsertSchema.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Invalid request", issues: body.error.issues });
@@ -43,12 +44,12 @@ contactsRouter.post("/contacts", async (req: Request, res: Response) => {
     ...body.data,
     aliases: body.data.aliases ?? [],
     resolution_status: body.data.resolution_status ?? "unresolved",
-  });
+  }, req.verifiedWallet!);
   res.status(201).json(contact);
 });
 
-contactsRouter.delete("/contacts/:id", async (req: Request, res: Response) => {
-  const deleted = await deleteContact(req.params.id);
+contactsRouter.delete("/contacts/:id", makeRequireWallet("delete-contact"), async (req: Request, res: Response) => {
+  const deleted = await deleteContact(req.params.id, req.verifiedWallet!);
   if (!deleted) {
     res.status(404).json({ error: "Not found" });
     return;

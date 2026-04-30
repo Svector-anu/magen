@@ -66,11 +66,6 @@ async function getWithWallet<T>(path: string, address: string, sig: string, minu
   return data as T;
 }
 
-async function del(path: string): Promise<void> {
-  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
-  if (!res.ok && res.status !== 204) throw new Error("Delete failed");
-}
-
 async function delWithWallet(path: string, address: string, sig: string, minute: number): Promise<void> {
   const res = await fetch(`${BASE}${path}`, {
     method: "DELETE",
@@ -173,12 +168,14 @@ export const api = {
   resolveRecipients: (identifiers: string[]) =>
     post<{ results: ResolveResult[] }>("/resolve-recipients", { identifiers }),
 
-  listContacts: () => get<Contact[]>("/contacts"),
+  listContacts: (address: string, sig: string, minute: number) =>
+    getWithWallet<Contact[]>("/contacts", address, sig, minute),
 
-  upsertContact: (data: Partial<Contact> & { display_name: string }) =>
-    post<Contact>("/contacts", data),
+  upsertContact: (data: Partial<Contact> & { display_name: string }, address: string, sig: string, minute: number) =>
+    postWithWallet<Contact>("/contacts", data, address, sig, minute),
 
-  deleteContact: (id: string) => del(`/contacts/${id}`),
+  deleteContact: (id: string, address: string, sig: string, minute: number) =>
+    delWithWallet(`/contacts/${id}`, address, sig, minute),
 
   savePolicy: (
     params: { policy: DisbursementPolicy; vaultAddress: string },

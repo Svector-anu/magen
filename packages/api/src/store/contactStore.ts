@@ -4,6 +4,7 @@ import { sql } from "../services/db.js";
 
 type ContactRow = {
   id: string;
+  owner_wallet: string;
   display_name: string;
   aliases: string;
   email: string | null;
@@ -24,29 +25,36 @@ function rowToContact(row: ContactRow): Contact {
   });
 }
 
-export async function listContacts(): Promise<Contact[]> {
-  const rows = await sql<ContactRow[]>`SELECT * FROM contacts ORDER BY display_name ASC`;
+export async function listContacts(ownerWallet: string): Promise<Contact[]> {
+  const rows = await sql<ContactRow[]>`
+    SELECT * FROM contacts WHERE owner_wallet = ${ownerWallet} ORDER BY display_name ASC
+  `;
   return rows.map(rowToContact);
 }
 
-export async function getContact(id: string): Promise<Contact | undefined> {
-  const rows = await sql<ContactRow[]>`SELECT * FROM contacts WHERE id = ${id}`;
+export async function getContact(id: string, ownerWallet: string): Promise<Contact | undefined> {
+  const rows = await sql<ContactRow[]>`
+    SELECT * FROM contacts WHERE id = ${id} AND owner_wallet = ${ownerWallet}
+  `;
   return rows[0] ? rowToContact(rows[0]) : undefined;
 }
 
-export async function findByIdentifier(identifier: string): Promise<Contact | undefined> {
+export async function findByIdentifier(identifier: string, ownerWallet: string): Promise<Contact | undefined> {
   const lower = identifier.toLowerCase();
   const rows = await sql<ContactRow[]>`
     SELECT * FROM contacts
-    WHERE lower(wallet_address) = ${lower}
-       OR lower(ens_name) = ${lower}
-       OR lower(email) = ${lower}
-       OR lower(display_name) = ${lower}
+    WHERE owner_wallet = ${ownerWallet}
+      AND (
+        lower(wallet_address) = ${lower}
+        OR lower(ens_name) = ${lower}
+        OR lower(email) = ${lower}
+        OR lower(display_name) = ${lower}
+      )
     LIMIT 1
   `;
   if (rows[0]) return rowToContact(rows[0]);
 
-  const all = await sql<ContactRow[]>`SELECT * FROM contacts`;
+  const all = await sql<ContactRow[]>`SELECT * FROM contacts WHERE owner_wallet = ${ownerWallet}`;
   const byAlias = all.find((r) =>
     (JSON.parse(r.aliases) as string[]).some((a) => a.toLowerCase() === lower)
   );
@@ -54,12 +62,13 @@ export async function findByIdentifier(identifier: string): Promise<Contact | un
 }
 
 export async function upsertContact(
-  data: Omit<Contact, "id" | "created_at" | "updated_at"> & { id?: string }
+  data: Omit<Contact, "id" | "created_at" | "updated_at"> & { id?: string },
+  ownerWallet: string,
 ): Promise<Contact> {
   const now = new Date().toISOString();
 
   const existing = data.id
-    ? (await sql<ContactRow[]>`SELECT * FROM contacts WHERE id = ${data.id}`)[0]
+    ? (await sql<ContactRow[]>`SELECT * FROM contacts WHERE id = ${data.id} AND owner_wallet = ${ownerWallet}`)[0]
     : undefined;
 
   const contact = ContactSchema.parse({
@@ -70,9 +79,9 @@ export async function upsertContact(
   });
 
   await sql`
-    INSERT INTO contacts (id, display_name, aliases, email, ens_name, wallet_address, resolution_status, created_at, updated_at)
+    INSERT INTO contacts (id, owner_wallet, display_name, aliases, email, ens_name, wallet_address, resolution_status, created_at, updated_at)
     VALUES (
-      ${contact.id}, ${contact.display_name}, ${JSON.stringify(contact.aliases)},
+      ${contact.id}, ${ownerWallet}, ${contact.display_name}, ${JSON.stringify(contact.aliases)},
       ${contact.email ?? null}, ${contact.ens_name ?? null}, ${contact.wallet_address ?? null},
       ${contact.resolution_status}, ${contact.created_at}, ${contact.updated_at}
     )
@@ -89,7 +98,7 @@ export async function upsertContact(
   return contact;
 }
 
-export async function deleteContact(id: string): Promise<boolean> {
-  const result = await sql`DELETE FROM contacts WHERE id = ${id}`;
+export async function deleteContact(id: string, ownerWallet: string): Promise<boolean> {
+  const result = await sql`DELETE FROM contacts WHERE id = ${id} AND owner_wallet = ${ownerWallet}`;
   return result.count > 0;
 }

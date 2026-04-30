@@ -9,4 +9,7 @@ export default defineConfig({
       "/api": "http://localhost:3001",
     },
   },
+  resolve: {
+    dedupe: ["wagmi", "@wagmi/core", "viem", "react", "react-dom"],
+  },
 });

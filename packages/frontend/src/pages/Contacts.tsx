@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSignMessage } from "wagmi";
 import { api } from "../lib/api.js";
+import { getOrSign } from "../lib/walletAuth.js";
 import type { Contact } from "@magen/shared";
 import styles from "./Contacts.module.css";
 
@@ -17,6 +19,8 @@ const EMPTY_FORM: FormState = { display_name: "", wallet_address: "", email: "",
 
 export function Contacts() {
   const { authenticated, login } = usePrivy();
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +31,17 @@ export function Contacts() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
+  const signRef = useRef(signMessageAsync);
+  useEffect(() => { signRef.current = signMessageAsync; });
+
   useEffect(() => {
-    api.listContacts()
+    if (!address) { setLoading(false); return; }
+    getOrSign(address, "list-contacts", (msg) => signRef.current({ message: msg }))
+      .then((auth) => api.listContacts(address, auth.sig, auth.minute))
       .then(setContacts)
       .catch(() => setContacts([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [address]);
 
   useEffect(() => {
     if (showForm) nameRef.current?.focus();
@@ -51,6 +60,7 @@ export function Contacts() {
 
   async function handleSave() {
     setFormError(null);
+    if (!address) return;
     if (!form.display_name.trim()) { setFormError("Name is required."); return; }
     if (form.wallet_address && !EVM_RE.test(form.wallet_address)) {
       setFormError("Wallet must be a valid 0x address (42 chars).");
@@ -59,6 +69,7 @@ export function Contacts() {
 
     setSaving(true);
     try {
+      const auth = await getOrSign(address, "save-contact", (msg) => signRef.current({ message: msg }));
       const payload: Parameters<typeof api.upsertContact>[0] = {
         display_name: form.display_name.trim(),
         aliases: form.aliases.split(",").map(a => a.trim()).filter(Boolean),
@@ -66,7 +77,7 @@ export function Contacts() {
         ...(form.wallet_address ? { wallet_address: form.wallet_address.trim() } : {}),
         ...(form.email.trim() ? { email: form.email.trim() } : {}),
       };
-      const created = await api.upsertContact(payload);
+      const created = await api.upsertContact(payload, address, auth.sig, auth.minute);
       setContacts(prev => [created, ...prev]);
       closeForm();
     } catch (err) {
@@ -77,9 +88,11 @@ export function Contacts() {
   }
 
   async function handleDelete(id: string) {
+    if (!address) return;
     setDeletingId(id);
     try {
-      await api.deleteContact(id);
+      const auth = await getOrSign(address, "delete-contact", (msg) => signRef.current({ message: msg }));
+      await api.deleteContact(id, address, auth.sig, auth.minute);
       setContacts(prev => prev.filter(c => c.id !== id));
     } catch {
       // ignore

@@ -37,7 +37,7 @@ export function App() {
           loginMessage: "Private scheduled payments on Arbitrum",
           walletChainType: "ethereum-only",
         },
-        loginMethods: ["email", "wallet", "google", "apple"],
+        loginMethods: ["email", "wallet", "google", "apple", "farcaster"],
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" },
         },
