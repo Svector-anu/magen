@@ -4,6 +4,17 @@ import { useUsdcBalance, useUsdcAllowance, useApproveUsdc, useWrap, formatUsdc }
 import { WrongChainBanner } from "./WrongChainBanner.js";
 import styles from "./WrapUsdcModal.module.css";
 
+function friendlyWrapError(err: unknown): string {
+  const msg = String(err);
+  if (msg.includes("does not match the target chain") || msg.includes("ChainMismatch") || msg.includes("chain"))
+    return "Wrong network — switch to Arbitrum Sepolia using the banner above.";
+  if (msg.includes("User rejected") || msg.includes("user rejected"))
+    return "Transaction cancelled.";
+  if (msg.includes("insufficient funds"))
+    return "Insufficient ETH for gas fees.";
+  return "Transaction failed. Please try again.";
+}
+
 interface Props {
   onClose: () => void;
   onSuccess?: () => void;
@@ -150,7 +161,7 @@ export function WrapUsdcModal({ onClose, onSuccess }: Props) {
 
               {(approve.error || wrap.error) && (
                 <div className={styles.errorMsg}>
-                  {String(approve.error ?? wrap.error)}
+                  {friendlyWrapError(approve.error ?? wrap.error)}
                 </div>
               )}
 
