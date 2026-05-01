@@ -16,14 +16,6 @@ const PLACEHOLDERS = [
   "send 50 USDC to bob every friday",
 ];
 
-const SUBLINES = [
-  "Payments that run themselves.",
-  "Set it once. Walk away.",
-  "Never miss a payment again.",
-  "Give your agent a wallet.",
-  "Let your AI handle the bills.",
-  "It just pays. Quietly.",
-];
 
 interface PolicyCardData {
   recipient_display_name: string;
@@ -82,10 +74,8 @@ export function Home() {
   const [enrichment, setEnrichment] = useState<{ onChainContext?: string }>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
-  const [subIdx, setSubIdx] = useState(0);
-  const [subText, setSubText] = useState("");
-  const [subErasing, setSubErasing] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [showScroll, setShowScroll] = useState(true);
   const [activePolicies, setActivePolicies] = useState<ActivePolicy[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -131,25 +121,10 @@ export function Home() {
   }, []);
 
   useEffect(() => {
-    const phrase = SUBLINES[subIdx];
-    if (!subErasing) {
-      if (subText.length < phrase.length) {
-        const t = setTimeout(() => setSubText(phrase.slice(0, subText.length + 1)), 48);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => setSubErasing(true), 2600);
-      return () => clearTimeout(t);
-    }
-    if (subText.length > 0) {
-      const t = setTimeout(() => setSubText((s) => s.slice(0, -1)), 24);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => {
-      setSubIdx((i) => (i + 1) % SUBLINES.length);
-      setSubErasing(false);
-    }, 120);
-    return () => clearTimeout(t);
-  }, [subText, subErasing, subIdx]);
+    function onScroll() { if (window.scrollY > 60) setShowScroll(false); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   async function handleParse() {
     if (!instruction.trim()) return;
@@ -209,7 +184,7 @@ export function Home() {
             <span className={styles.headlineDim}>keep them private.</span>
           </h1>
           <p className={styles.subheadline}>
-            {subText}<span className={styles.subCursor} />
+            private recurring payments — set once, runs itself.
           </p>
         </section>
 
@@ -224,7 +199,10 @@ export function Home() {
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleParse();
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (canParse) handleParse();
+                }
               }}
               placeholder={PLACEHOLDERS[placeholderIdx]}
               rows={2}
@@ -268,7 +246,7 @@ export function Home() {
                   )}
                 </button>
               )}
-              <span className={styles.hint}>⌘↵</span>
+              <span className={styles.hint}>↵ enter · shift↵ newline</span>
             </div>
 
             {stage === "error" && errors.length > 0 && (
@@ -400,6 +378,13 @@ export function Home() {
         )}
       </div>
     </div>
+    {showScroll && (
+      <div className={styles.scrollArrow} aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    )}
     <EcosystemSection />
     </>
   );
@@ -509,11 +494,3 @@ function PolicyCard({
   );
 }
 
-function Dots() {
-  const [n, setN] = useState(1);
-  useEffect(() => {
-    const t = setInterval(() => setN((x) => (x % 3) + 1), 400);
-    return () => clearInterval(t);
-  }, []);
-  return <span>{".".repeat(n)}</span>;
-}

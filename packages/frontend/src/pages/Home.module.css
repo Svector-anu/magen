@@ -158,19 +158,29 @@
 
 .inputWrap {
   position: relative;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   background: var(--bg-panel);
   border-radius: 14px;
   padding: 16px 18px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+[data-theme="light"] .inputWrap {
+  border-color: var(--border);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .inputWrap:focus-within {
-  border-color: rgba(124, 58, 237, 0.4);
+  border-color: rgba(124, 58, 237, 0.6);
   box-shadow:
-    0 0 0 3px rgba(124, 58, 237, 0.08),
-    0 1px 4px rgba(0, 0, 0, 0.05);
+    0 0 0 3px rgba(124, 58, 237, 0.12),
+    0 1px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .inputWrap:focus-within {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08), 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .promptChar {
@@ -221,6 +231,11 @@
 }
 
 /* ── use case chips ── */
+@keyframes chipFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
+}
+
 .useCaseChips {
   display: flex;
   flex-wrap: wrap;
@@ -238,7 +253,13 @@
   border-radius: 100px;
   letter-spacing: 0.01em;
   user-select: none;
+  animation: chipFloat 4s ease-in-out infinite;
 }
+
+.chip:nth-child(1) { animation-delay: 0s; }
+.chip:nth-child(2) { animation-delay: 0.6s; }
+.chip:nth-child(3) { animation-delay: 1.2s; }
+.chip:nth-child(4) { animation-delay: 1.8s; }
 
 .chipSoon {
   color: var(--text-dim);
@@ -296,8 +317,11 @@
 }
 
 .btnPrimary:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+  opacity: 0.18;
+  cursor: default;
+  background: var(--text-muted);
+  box-shadow: none;
+  color: rgba(255,255,255,0.4);
 }
 
 .btnGhost {
@@ -720,5 +744,43 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* ── scroll arrow ── */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50%       { transform: translateY(6px); opacity: 0.8; }
+}
+
+.scrollArrow {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text-dim);
+  animation: scrollBounce 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── wide screen breakpoints ── */
+@media (min-width: 1280px) {
+  .container { max-width: 720px; }
+  .headline { font-size: clamp(52px, 5vw, 80px); }
+}
+
+@media (min-width: 1600px) {
+  .container { max-width: 780px; }
+  .page { padding-top: 96px; }
+}
+
+@media (min-width: 1920px) {
+  .container { max-width: 840px; }
+  .headline { font-size: 88px; }
+  .page { padding-top: 120px; }
+  .page::before {
+    width: 1600px;
+    height: 800px;
+  }
 }
 
