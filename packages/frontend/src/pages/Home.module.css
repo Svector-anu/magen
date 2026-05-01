@@ -754,13 +754,21 @@
 
 .scrollArrow {
   position: fixed;
-  bottom: 28px;
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  color: var(--text-dim);
+  color: var(--text-muted);
   animation: scrollBounce 2s ease-in-out infinite;
   pointer-events: none;
-  z-index: 10;
+  z-index: 50;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── wide screen breakpoints ── */

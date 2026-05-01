@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useBalance } from "wagmi";
 import { useUsdcBalance, formatUsdc } from "../hooks/useWrapUsdc.js";
 import { WrapUsdcModal } from "./WrapUsdcModal.js";
@@ -8,6 +9,7 @@ const DISMISS_KEY = "magen_onboarding_v1_dismissed";
 const MIN_ETH_WEI = 500_000_000_000_000n; // 0.0005 ETH
 
 export function OnboardingChecklist() {
+  const { authenticated } = usePrivy();
   const { address } = useAccount();
   const [dismissed, setDismissed] = useState(() => !!localStorage.getItem(DISMISS_KEY));
   const [showWrap, setShowWrap] = useState(false);
@@ -15,7 +17,7 @@ export function OnboardingChecklist() {
   const { data: ethBalance } = useBalance({ address });
   const { data: usdcBalance } = useUsdcBalance(address);
 
-  if (!address || dismissed) return null;
+  if (!authenticated || !address || dismissed) return null;
 
   const hasEth  = ethBalance !== undefined && ethBalance.value >= MIN_ETH_WEI;
   const hasUsdc = usdcBalance !== undefined && usdcBalance > 0n;
